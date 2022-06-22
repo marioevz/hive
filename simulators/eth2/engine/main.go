@@ -20,11 +20,11 @@ var (
 var tests = []testSpec{
 	//{Name: "transition-testnet", Run: TransitionTestnet},
 	{Name: "test-rpc-error", Run: TestRPCError},
-	{Name: "invalid-transition-payload", Run: InvalidTransitionPayload},
-	{Name: "invalid-payload-block-hash", Run: InvalidTransitionPayloadBlockHash},
-	{Name: "invalid-header-prevrandao", Run: IncorrectHeaderPrevRandaoPayload},
-	{Name: "invalid-terminal-block-payload-lower-ttd", Run: IncorrectTerminalBlockLowerTTD},
-	{Name: "syncing-with-invalid-chain", Run: SyncingWithInvalidChain},
+	//{Name: "invalid-transition-payload", Run: InvalidTransitionPayload},
+	//{Name: "invalid-payload-block-hash", Run: InvalidTransitionPayloadBlockHash},
+	//{Name: "invalid-header-prevrandao", Run: IncorrectHeaderPrevRandaoPayload},
+	// {Name: "invalid-terminal-block-payload-lower-ttd", Run: IncorrectTerminalBlockLowerTTD},
+	//{Name: "syncing-with-invalid-chain", Run: SyncingWithInvalidChain},
 }
 
 func main() {
