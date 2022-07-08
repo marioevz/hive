@@ -48,6 +48,7 @@ if [ "$HIVE_ETH2_MERGE_ENABLED" != "" ]; then
     echo -n "0x7365637265747365637265747365637265747365637265747365637265747365" > /jwtsecret
     merge_option="--merge --execution-endpoints=$HIVE_ETH2_ETH1_ENGINE_RPC_ADDRS --jwt-secrets=/jwtsecret"
 fi
+opt_sync_option=$([[ "$HIVE_ETH2_SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY" == "" ]] && echo "" || echo "--safe-slots-to-import-optimistically=$HIVE_ETH2_SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY")
 
 lighthouse \
     --debug-level="$LOG" \
@@ -55,7 +56,7 @@ lighthouse \
     --testnet-dir=/data/testnet_setup \
     bn \
     --network-dir=/data/network \
-    $metrics_option $eth1_option $merge_option \
+    $metrics_option $eth1_option $merge_option $opt_sync_option \
     --enr-tcp-port="${HIVE_ETH2_P2P_TCP_PORT:-9000}" \
     --enr-udp-port="${HIVE_ETH2_P2P_UDP_PORT:-9000}" \
     --enr-address="${CONTAINER_IP}" \
