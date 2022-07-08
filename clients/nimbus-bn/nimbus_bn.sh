@@ -59,6 +59,7 @@ else
     done
 fi
 metrics_option=$([[ "$HIVE_ETH2_METRICS_PORT" == "" ]] && echo "" || echo "--metrics --metrics-address=0.0.0.0 --metrics-port=$HIVE_ETH2_METRICS_PORT")
+opt_sync_option=$([[ "$HIVE_ETH2_SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY" == "" ]] && echo "" || echo "--safe-slots-to-import-optimistically=$HIVE_ETH2_SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY")
 
 echo -n "0x7365637265747365637265747365637265747365637265747365637265747365" > /jwtsecret
 
@@ -72,7 +73,7 @@ echo Starting Nimbus Beacon Node
     --web3-url="$HIVE_ETH2_ETH1_ENGINE_RPC_ADDRS" \
     --jwt-secret=/jwtsecret \
     --num-threads=4 \
-    $bootnodes_option $metrics_option \
+    $bootnodes_option $metrics_option $opt_sync_option \
     --nat="extip:${CONTAINER_IP}" \
     --listen-address=0.0.0.0 \
     --tcp-port="${HIVE_ETH2_P2P_TCP_PORT:-9000}" \
