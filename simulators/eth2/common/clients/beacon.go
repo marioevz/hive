@@ -51,13 +51,108 @@ type BeaconClientConfig struct {
 	Subnet                  string
 }
 
+type BeaconStateCache struct {
+	SlotToState      map[common.Slot]*VersionedBeaconStateResponse
+	StateRootToState map[tree.Root]*VersionedBeaconStateResponse
+	BlockRootToState map[tree.Root]*VersionedBeaconStateResponse
+}
+
+func (c *BeaconStateCache) ResetCache() error {
+	c.SlotToState = make(map[common.Slot]*VersionedBeaconStateResponse)
+	c.StateRootToState = make(map[tree.Root]*VersionedBeaconStateResponse)
+	c.BlockRootToState = make(map[tree.Root]*VersionedBeaconStateResponse)
+	return nil
+}
+
+func (c *BeaconStateCache) GetStateByStateId(
+	stateId eth2api.StateId,
+) (*VersionedBeaconStateResponse, error) {
+	switch t := stateId.(type) {
+	case eth2api.StateIdRoot:
+		if c.StateRootToState == nil {
+			return nil, nil
+		}
+		if s, ok := c.StateRootToState[tree.Root(t)]; ok {
+			return s, nil
+		}
+	case eth2api.StateIdSlot:
+		if c.SlotToState == nil {
+			return nil, nil
+		}
+		if s, ok := c.SlotToState[common.Slot(t)]; ok {
+			return s, nil
+		}
+	}
+	return nil, nil
+}
+
+func (c *BeaconStateCache) GetStateByBlockId(
+	blockId eth2api.BlockId,
+) (*VersionedBeaconStateResponse, error) {
+	switch t := blockId.(type) {
+	case eth2api.BlockIdRoot:
+		if c.BlockRootToState == nil {
+			return nil, nil
+		}
+		if s, ok := c.BlockRootToState[tree.Root(t)]; ok {
+			return s, nil
+		}
+	case eth2api.BlockIdSlot:
+		if c.SlotToState == nil {
+			return nil, nil
+		}
+		if s, ok := c.SlotToState[common.Slot(t)]; ok {
+			return s, nil
+		}
+	}
+	return nil, nil
+}
+
+func (c *BeaconStateCache) SaveState(
+	s *VersionedBeaconStateResponse,
+) (*VersionedBeaconStateResponse, error) {
+	var (
+		slot      = s.StateSlot()
+		stateRoot = s.Root()
+		blockRoot = s.BlockRoot()
+	)
+
+	if c.SlotToState == nil {
+		c.SlotToState = make(map[common.Slot]*VersionedBeaconStateResponse)
+	}
+	if existingState, ok := c.SlotToState[slot]; ok {
+		if existingState.Root() != s.Root() {
+			return nil, fmt.Errorf(
+				"colliding slot with different roots found: slot %d, existing root %s, new root %s",
+				slot,
+				existingState.Root().String(),
+				stateRoot.String(),
+			)
+		}
+	}
+	c.SlotToState[slot] = s
+
+	if c.StateRootToState == nil {
+		c.StateRootToState = make(map[tree.Root]*VersionedBeaconStateResponse)
+	}
+	c.StateRootToState[stateRoot] = s
+
+	if c.BlockRootToState == nil {
+		c.BlockRootToState = make(map[tree.Root]*VersionedBeaconStateResponse)
+	}
+	c.BlockRootToState[blockRoot] = s
+
+	return s, nil
+}
+
 type BeaconClient struct {
 	Client
 	Logger  utils.Logging
 	Config  BeaconClientConfig
 	Builder builder.Builder
 
-	api *eth2api.Eth2HttpClient
+	api   *eth2api.Eth2HttpClient
+	cache BeaconStateCache
 }
 
 func (bn *BeaconClient) Logf(format string, values ...interface{}) {
@@ -75,7 +170,6 @@ func (bn *BeaconClient) Start() error {
 				return err
 			}
 		}
-
 	}
 
 	return bn.Init(context.Background())
@@ -98,8 +192,10 @@ func (bn *BeaconClient) Init(ctx context.Context) error {
 		}
 	}
 
-	var wg sync.WaitGroup
-	var errs = make(chan error, 2)
+	var (
+		wg   sync.WaitGroup
+		errs = make(chan error, 2)
+	)
 	if bn.Config.Spec == nil {
 		// Try to fetch config directly from the client
 		wg.Add(1)
@@ -151,8 +247,9 @@ func (bn *BeaconClient) Init(ctx context.Context) error {
 	case err := <-errs:
 		return err
 	default:
-		return nil
 	}
+
+	return bn.cache.ResetCache()
 }
 
 func (bn *BeaconClient) Shutdown() error {
@@ -588,6 +685,34 @@ func (vbs *VersionedBeaconStateResponse) Root() tree.Root {
 	panic("badly formatted beacon state")
 }
 
+func (vbs *VersionedBeaconStateResponse) BlockRoot() tree.Root {
+	switch state := vbs.Data.(type) {
+	case *phase0.BeaconState:
+		return state.LatestBlockHeader.BodyRoot
+	case *altair.BeaconState:
+		return state.LatestBlockHeader.BodyRoot
+	case *bellatrix.BeaconState:
+		return state.LatestBlockHeader.BodyRoot
+	case *capella.BeaconState:
+		return state.LatestBlockHeader.BodyRoot
+	}
+	panic("badly formatted beacon state")
+}
+
+func (vbs *VersionedBeaconStateResponse) ParentBlockRoot() tree.Root {
+	switch state := vbs.Data.(type) {
+	case *phase0.BeaconState:
+		return state.LatestBlockHeader.ParentRoot
+	case *altair.BeaconState:
+		return state.LatestBlockHeader.ParentRoot
+	case *bellatrix.BeaconState:
+		return state.LatestBlockHeader.ParentRoot
+	case *capella.BeaconState:
+		return state.LatestBlockHeader.ParentRoot
+	}
+	panic("badly formatted beacon state")
+}
+
 func (vbs *VersionedBeaconStateResponse) CurrentVersion() common.Version {
 	switch state := vbs.Data.(type) {
 	case *phase0.BeaconState:
@@ -708,6 +833,20 @@ func (vbs *VersionedBeaconStateResponse) LatestExecutionPayloadHeaderHash() tree
 	panic("badly formatted beacon state")
 }
 
+func (vbs *VersionedBeaconStateResponse) LatestExecutionPayloadHeaderNumber() uint64 {
+	switch state := vbs.Data.(type) {
+	case *phase0.BeaconState:
+		return 0
+	case *altair.BeaconState:
+		return 0
+	case *bellatrix.BeaconState:
+		return uint64(state.LatestExecutionPayloadHeader.BlockNumber)
+	case *capella.BeaconState:
+		return uint64(state.LatestExecutionPayloadHeader.BlockNumber)
+	}
+	panic("badly formatted beacon state")
+}
+
 func (vbs *VersionedBeaconStateResponse) NextWithdrawalIndex() (common.WithdrawalIndex, error) {
 	var wIndex common.WithdrawalIndex
 	switch state := vbs.Data.(type) {
@@ -724,6 +863,12 @@ func (vbs *VersionedBeaconStateResponse) NextWithdrawalValidatorIndex() (common.
 		wIndex = state.NextWithdrawalValidatorIndex
 	}
 	return wIndex, nil
+}
+
+func (vbs *VersionedBeaconStateResponse) Withdrawals(
+	previousState *VersionedBeaconStateResponse,
+) (common.Withdrawals, error) {
+	return previousState.NextWithdrawals(vbs.StateSlot())
 }
 
 func (vbs *VersionedBeaconStateResponse) NextWithdrawals(
@@ -840,6 +985,12 @@ func (bn *BeaconClient) BeaconStateV2(
 		exists                       bool
 		err                          error
 	)
+	// Try to get from cache first
+	if s, err := bn.cache.GetStateByStateId(stateId); err != nil {
+		return nil, err
+	} else if s != nil {
+		return s, err
+	}
 	ctx, cancel := utils.ContextTimeoutRPC(parentCtx)
 	defer cancel()
 	exists, err = debugapi.BeaconStateV2(
@@ -851,16 +1002,27 @@ func (bn *BeaconClient) BeaconStateV2(
 	if !exists {
 		return nil, fmt.Errorf("endpoint not found on beacon client")
 	}
-	return &VersionedBeaconStateResponse{
+	if err != nil {
+		return nil, err
+	}
+	return bn.cache.SaveState(&VersionedBeaconStateResponse{
 		VersionedBeaconState: versionedBeaconStateResponse,
 		spec:                 bn.Config.Spec,
-	}, err
+	})
 }
 
+// Gets the beacon state of a given block
 func (bn *BeaconClient) BeaconStateV2ByBlock(
 	parentCtx context.Context,
 	blockId eth2api.BlockId,
 ) (*VersionedBeaconStateResponse, error) {
+	// First try to get it from cache
+	if s, err := bn.cache.GetStateByBlockId(blockId); err != nil {
+		return nil, err
+	} else if s != nil {
+		return s, err
+	}
+
 	var (
 		headInfo *eth2api.BeaconBlockHeaderAndInfo
 		err      error
@@ -871,8 +1033,35 @@ func (bn *BeaconClient) BeaconStateV2ByBlock(
 	}
 	return bn.BeaconStateV2(
 		parentCtx,
-		eth2api.StateIdRoot(headInfo.Header.Message.StateRoot),
+		eth2api.StateIdSlot(headInfo.Header.Message.Slot),
 	)
+}
+
+// Gets the beacon state history of a given head
+func (bn *BeaconClient) BeaconStateV2HistoryFromHead(
+	parentCtx context.Context,
+	headBlockId eth2api.BlockId,
+) ([]*VersionedBeaconStateResponse, error) {
+	h := make([]*VersionedBeaconStateResponse, 0)
+	currentState, err := bn.BeaconStateV2ByBlock(parentCtx, headBlockId)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		h = append([]*VersionedBeaconStateResponse{currentState}, h...)
+		nextParentBlockRoot := currentState.ParentBlockRoot()
+		if bytes.Equal(nextParentBlockRoot[:], EMPTY_TREE_ROOT[:]) {
+			break
+		}
+		currentState, err = bn.BeaconStateV2ByBlock(
+			parentCtx,
+			eth2api.BlockIdRoot(nextParentBlockRoot),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return h, nil
 }
 
 func (bn *BeaconClient) StateValidators(
