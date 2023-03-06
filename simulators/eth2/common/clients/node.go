@@ -156,6 +156,7 @@ type Node struct {
 	ExecutionClient *ExecutionClient
 	BeaconClient    *BeaconClient
 	ValidatorClient *ValidatorClient
+	Subnet          string
 	Verification    bool
 }
 
@@ -369,6 +370,16 @@ func (all Nodes) VerificationNodes() Nodes {
 
 // Return subset of nodes that are currently running
 func (all Nodes) Running() Nodes {
+	res := make(Nodes, 0)
+	for _, n := range all {
+		if n.IsRunning() {
+			res = append(res, n)
+		}
+	}
+	return res
+}
+
+func (all Nodes) Subnet() Nodes {
 	res := make(Nodes, 0)
 	for _, n := range all {
 		if n.IsRunning() {

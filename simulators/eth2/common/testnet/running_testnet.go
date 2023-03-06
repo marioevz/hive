@@ -256,6 +256,7 @@ func StartTestnet(
 		nodeClient.Logging = t
 		nodeClient.Index = nodeIndex
 		nodeClient.Verification = node.TestVerificationNode
+		nodeClient.Subnet = node.Subnet
 		// Start the node clients if specified so
 		if !node.DisableStartup {
 			if err := nodeClient.Start(); err != nil {
