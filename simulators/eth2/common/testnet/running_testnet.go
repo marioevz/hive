@@ -545,6 +545,116 @@ func (t *Testnet) WaitForFinality(ctx context.Context) (
 	}
 }
 
+// WaitForCanonicalChain: Blocks until all beacon clients converge into a single
+// canonical head.
+func (t *Testnet) WaitForCanonicalChain(ctx context.Context) (
+	*eth2api.BeaconBlockHeaderAndInfo, error,
+) {
+	var (
+		genesis      = t.GenesisTimeUnix()
+		slotDuration = time.Duration(t.spec.SECONDS_PER_SLOT) * time.Second
+		timer        = time.NewTicker(slotDuration)
+		runningNodes = t.VerificationNodes().Running()
+		results      = makeResults(runningNodes, t.maxConsecutiveErrorsOnWaits)
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case tim := <-timer.C:
+			// start polling after first slot of genesis
+			if tim.Before(genesis.Add(slotDuration)) {
+				t.Logf("Time till genesis: %s", genesis.Sub(tim))
+				continue
+			}
+
+			// new slot, log and check status of all beacon nodes
+			var (
+				wg        sync.WaitGroup
+				clockSlot = t.spec.TimeToSlot(
+					common.Timestamp(time.Now().Unix()),
+					t.GenesisTime(),
+				)
+			)
+			results.Clear()
+
+			for i, n := range runningNodes {
+				wg.Add(1)
+				go func(ctx context.Context, n *clients.Node, r *result) {
+					defer wg.Done()
+
+					b := n.BeaconClient
+
+					headInfo, err := b.BlockHeader(ctx, eth2api.BlockHead)
+					if err != nil {
+						r.err = errors.Wrap(err, "failed to poll head")
+						return
+					}
+
+					versionedBlock, err := b.BlockV2(
+						ctx,
+						eth2api.BlockIdRoot(headInfo.Root),
+					)
+					if err != nil {
+						r.err = errors.Wrap(err, "failed to retrieve block")
+						return
+					}
+					execution := ethcommon.Hash{}
+					if executionPayload, err := versionedBlock.ExecutionPayload(); err == nil {
+						execution = executionPayload.BlockHash
+					}
+
+					slot := headInfo.Header.Message.Slot
+					if clockSlot > slot &&
+						(clockSlot-slot) >= t.spec.SLOTS_PER_EPOCH {
+						r.fatal = fmt.Errorf(
+							"unable to sync for an entire epoch: clockSlot=%d, slot=%d",
+							clockSlot,
+							slot,
+						)
+						return
+					}
+
+					r.msg = fmt.Sprintf(
+						"fork=%s, clock_slot=%d, slot=%d, head=%s, "+
+							"exec_payload=%s",
+						versionedBlock.Version,
+						clockSlot,
+						slot,
+						utils.Shorten(headInfo.Root.String()),
+						utils.Shorten(execution.String()),
+					)
+
+					r.result = headInfo
+				}(ctx, n, results[i])
+			}
+			wg.Wait()
+
+			if err := results.CheckError(); err != nil {
+				return nil, err
+			}
+			results.PrintMessages(t.Logf)
+			if head, ok := results[0].result.(*eth2api.BeaconBlockHeaderAndInfo); ok {
+				allMatch := true
+				for _, r := range results {
+					if otherHead, ok := r.result.(*eth2api.BeaconBlockHeaderAndInfo); ok {
+						if !bytes.Equal(head.Root[:], otherHead.Root[:]) {
+							allMatch = false
+						}
+					} else {
+						allMatch = false
+					}
+				}
+				if allMatch {
+					return head, nil
+				}
+			}
+
+		}
+	}
+}
+
 // WaitForExecutionFinality blocks until a beacon client reaches finality
 // and the finality checkpoint contains an execution payload,
 // or timeoutSlots have passed, whichever happens first.
