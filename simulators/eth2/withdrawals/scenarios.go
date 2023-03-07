@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -59,7 +62,7 @@ func (ts BaseWithdrawalsTestSpec) Execute(
 	// Get all validators info
 	allValidators, err := ValidatorsFromBeaconState(
 		testnet.GenesisBeaconState(),
-		*testnet.Spec().Spec,
+		testnet.Spec().Spec,
 		env.Keys,
 		&blsDomain,
 	)
@@ -225,35 +228,35 @@ func (ts BaseWithdrawalsTestSpec) Execute(
 	defer cancel()
 loop:
 	for {
+		// Print all info
+		testnet.BeaconClients().Running().PrintStatus(slotCtx)
+
+		// Check all accounts
+		for _, n := range testnet.Nodes.Running() {
+			ec := n.ExecutionClient
+			bc := n.BeaconClient
+			if allAccountsWithdrawn, err := allValidators.Withdrawable().VerifyWithdrawnBalance(ctx, bc, ec, eth2api.BlockHead); err != nil {
+				t.Logf("INFO: error getting withdrawals balances: %v", err)
+				continue
+			} else if allAccountsWithdrawn {
+				t.Logf("INFO: All accounts have successfully withdrawn")
+				break loop
+			}
+		}
+
 		select {
 		case <-slotCtx.Done():
-			PrintWithdrawalHistory(allValidators[0].BlockStateCache)
+			PrintWithdrawalHistory(ctx, testnet.BeaconClients().Running()[0], eth2api.BlockHead)
 			t.Fatalf("FAIL: Timeout waiting on all accounts to withdraw")
 		case <-time.After(time.Duration(testnet.Spec().SECONDS_PER_SLOT) * time.Second):
-			// Print all info
-			testnet.BeaconClients().Running().PrintStatus(slotCtx)
-
-			// Check all accounts
-			for _, n := range testnet.Nodes.Running() {
-				ec := n.ExecutionClient
-				bc := n.BeaconClient
-				headBlockRoot, err := bc.BlockV2Root(ctx, eth2api.BlockHead)
-				if err != nil {
-					t.Logf("INFO: error getting head block: %v", err)
-					continue
-				}
-				if allAccountsWithdrawn, err := allValidators.Withdrawable().VerifyWithdrawnBalance(ctx, bc, ec, headBlockRoot); err != nil {
-					t.Logf("INFO: error getting withdrawals balances: %v", err)
-					continue
-				} else if allAccountsWithdrawn {
-					t.Logf("INFO: All accounts have successfully withdrawn")
-					break loop
-				}
-			}
 		}
 	}
 
-	PrintWithdrawalHistory(allValidators[0].BlockStateCache)
+	PrintWithdrawalHistory(
+		ctx,
+		testnet.BeaconClients().Running()[0],
+		eth2api.BlockHead,
+	)
 
 	// Lastly check all clients are on the same head
 	testnet.VerifyELHeads(ctx)
@@ -277,10 +280,305 @@ loop:
 	}
 }
 
-var (
-	slotsPerEpoch             = uint64(32)
-	withdrawalsPerInvalidList = uint64(16)
-)
+// Withdrawals re-org test routine:
+// - Launch two node pairs initially, disconnected from each other
+// - Beacon chain starts at capella
+// - Send BLS-to-execution changes on both forks, but the addresses are different
+// - Let both forks of the chain progress separately, wait for withdrawals on every account
+// - Spawn a fifth node that connects to all clients
+// - Wait until one of the forks becomes canonical to all clients
+// - Verify withdrawal accounts and balances are correct
+func (ts ReOrgWithdrawalsTestSpec) Execute(
+	t *hivesim.T,
+	env *tn.Environment,
+	n []clients.NodeDefinition,
+) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	config := ts.GetTestnetConfig(n)
+
+	testnet := tn.StartTestnet(ctx, t, env, config)
+	defer testnet.Stop()
+
+	if len(testnet.Nodes) != 5 {
+		t.Fatalf(
+			"FAIL: Expected five nodes, node count = %d",
+			len(testnet.Nodes),
+		)
+	} else if len(testnet.Nodes.Running()) != 4 {
+		t.Fatalf("FAIL: Expected two nodes running, node count = %d", len(testnet.Nodes.Running()))
+	}
+
+	// Get all validators info
+	blsDomain := ComputeBLSToExecutionDomain(testnet)
+	allValidators, err := ValidatorsFromBeaconState(
+		testnet.GenesisBeaconState(),
+		testnet.Spec().Spec,
+		env.Keys,
+		&blsDomain,
+	)
+	if err != nil {
+		t.Fatalf("FAIL: Error parsing validators from beacon state")
+	}
+	allValidatorsPerBeacon := []Validators{
+		allValidators,
+		allValidators.Copy(),
+	}
+
+	beaconPairs := []clients.BeaconClients{
+		testnet.BeaconClients().Running().Subnet("A"),
+		testnet.BeaconClients().Running().Subnet("B"),
+	}
+
+	// Wait for beacon chain genesis to happen
+	testnet.WaitForGenesis(ctx)
+
+	// Wait a couple of slots for connection between clients
+	testnet.WaitSlots(ctx, 3)
+
+	// Send different address to each running beacon client
+	for i, bns := range beaconPairs {
+		for _, v := range allValidatorsPerBeacon[i] {
+			addr := common.Address{}
+			addr[0] = byte(i)
+			addr[1] = byte(v.Index)
+
+			if _, err := v.SignBLSToExecutionChange(addr); err != nil {
+				t.Fatalf(
+					"FAIL: Unable to sign bls-to-execution change: %v",
+					err,
+				)
+			} else {
+				v.WithdrawAddress = &addr
+			}
+		}
+		for _, b := range bns {
+			if err := allValidatorsPerBeacon[i].SendSignedBLSToExecutionChanges(ctx, b); err != nil {
+				t.Fatalf(
+					"FAIL: Unable to submit bls-to-execution changes to beacon %d: %v",
+					i,
+					err,
+				)
+			} else {
+				t.Logf("INFO: Sent validator BLS changes to beacon %d", b.Config.ClientIndex)
+			}
+		}
+	}
+
+	// Wait for the credentials to be updated for all validators.
+	// It could take a while since the validators are missing a lot of slots
+	var (
+		wg   sync.WaitGroup
+		errs = make(chan error, len(testnet.BeaconClients().Running()))
+	)
+	timeoutCtx, cancel := testnet.Spec().
+		EpochTimeoutContext(ctx, 2)
+	defer cancel()
+	for i, b := range testnet.BeaconClients().Running() {
+		wg.Add(1)
+		go func(ctx context.Context, bn *clients.BeaconClient, bIdx int, vs Validators) {
+			defer wg.Done()
+			for {
+				if versionedBeaconState, err := bn.BeaconStateV2(
+					ctx,
+					eth2api.StateHead,
+				); err != nil || versionedBeaconState == nil {
+					t.Logf(
+						"WARN: Unable to get latest beacon state: %v",
+						err,
+					)
+				} else {
+					t.Logf(
+						"INFO: beacon %d: slot=%d, root=%s",
+						bIdx, versionedBeaconState.StateSlot(),
+						versionedBeaconState.Root(),
+					)
+					validators := versionedBeaconState.Validators()
+					validatorsUpdatedCount := 0
+					for _, v := range vs {
+						validator := validators[v.Index]
+						credentials := validator.WithdrawalCredentials
+						if v.WithdrawAddress != nil {
+							expectedAddress := *v.WithdrawAddress
+							if bytes.Equal(
+								credentials[:1],
+								[]byte{beacon.ETH1_ADDRESS_WITHDRAWAL_PREFIX},
+							) {
+								if !bytes.Equal(expectedAddress[:], credentials[12:]) {
+									errs <- fmt.Errorf("validator updated to incorrect address: want %s, got %s", expectedAddress.String(), common.BytesToAddress(credentials[12:]).String())
+									return
+								}
+								validatorsUpdatedCount += 1
+							}
+						} else {
+							t.Logf(
+								"WARN: validator has nil expected exec address: %d",
+								v.Index,
+							)
+						}
+					}
+					if validatorsUpdatedCount == len(vs) {
+						t.Logf(
+							"INFO: all %d validators updated",
+							validatorsUpdatedCount,
+						)
+						return
+					} else {
+						t.Logf(
+							"INFO: %d validators out of %d updated",
+							validatorsUpdatedCount,
+							len(vs),
+						)
+					}
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(testnet.Spec().SECONDS_PER_SLOT) * time.Second):
+				}
+			}
+		}(
+			timeoutCtx,
+			b,
+			i,
+			allValidatorsPerBeacon[i/2],
+		)
+	}
+
+	wg.Wait()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("FAIL: Timeout while waiting for BLS changes inclusion")
+	case err := <-errs:
+		t.Fatalf(
+			"FAIL: Error while trying to fetch BLS changes from client: %v",
+			err,
+		)
+	default:
+		t.Logf("INFO: All validators updated on both clients")
+		testnet.BeaconClients().Running().PrintStatus(ctx)
+	}
+
+	// Start third client to connect all clients together
+	if err := testnet.Nodes[4].Start(); err != nil {
+		t.Fatalf(
+			"FAIL: Unable to start third client: %v",
+			err,
+		)
+	}
+
+	if head, err := testnet.WaitForCanonicalChain(ctx); err != nil {
+		t.Fatalf(
+			"FAIL: Failure while waiting for clients to converge: %v",
+			err,
+		)
+	} else {
+		t.Logf("INFO: All beacon clients converged into the same head: slot=%d, root=%s", head.Header.Message.Slot, head.Root.String())
+	}
+
+	// Wait for all nodes to leave optimistic sync state
+	wg = sync.WaitGroup{}
+	errs = make(chan error, len(testnet.BeaconClients().Running()))
+	for _, bn := range testnet.BeaconClients().Running() {
+		wg.Add(1)
+		go func(bn *clients.BeaconClient) {
+			defer wg.Done()
+			if _, err := bn.WaitForOptimisticState(ctx, eth2api.BlockHead, false); err != nil {
+				errs <- err
+			}
+		}(bn)
+	}
+	wg.Wait()
+	select {
+	case err := <-errs:
+		t.Fatalf(
+			"FAIL: Failure while waiting for clients to leave optimistic sync: %v",
+			err,
+		)
+	default:
+		t.Logf("INFO: All beacon clients left optimistic sync mode")
+	}
+
+	// Verify which address list ended up as canonical
+	var (
+		canonicalValidators Validators
+		orphanedValidators  Validators
+	)
+	for i := range allValidatorsPerBeacon {
+		v := allValidatorsPerBeacon[i][0]
+		if set, err := v.CheckExecutionAddressApplied(ctx, testnet.BeaconClients().Running()[0], eth2api.StateHead); err != nil {
+			if errors.Is(err, UnexpectedExecutionWithdrawalAddress) {
+				orphanedValidators = allValidatorsPerBeacon[i]
+			} else {
+				t.Fatalf(
+					"FAIL: Failure while checking for canonical list of validator addresses: %v",
+					err,
+				)
+			}
+		} else if set {
+			canonicalValidators = allValidatorsPerBeacon[i]
+		}
+	}
+
+	// Verify withdrawal addresses and balances on all validators
+loop:
+	for {
+		// Print all info
+		testnet.BeaconClients().Running().PrintStatus(ctx)
+
+		// Check all accounts
+		for _, n := range testnet.Nodes.Running() {
+			ec := n.ExecutionClient
+			bc := n.BeaconClient
+			if allAccountsWithdrawn, err := canonicalValidators.Withdrawable().VerifyWithdrawnBalance(ctx, bc, ec, eth2api.BlockHead); err != nil {
+				t.Fatalf("FAIL: error during withdrawal balance verification: %v", err)
+			} else if allAccountsWithdrawn {
+				t.Logf("INFO: All accounts have successfully withdrawn")
+				break loop
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			PrintWithdrawalHistory(ctx, testnet.BeaconClients().Running()[0], eth2api.BlockHead)
+			t.Fatalf("FAIL: Timeout waiting on all accounts to withdraw")
+		case <-time.After(time.Duration(testnet.Spec().SECONDS_PER_SLOT) * time.Second):
+		}
+	}
+
+	for _, v := range orphanedValidators {
+		executionAddress := *v.WithdrawAddress
+		for _, ec := range testnet.ExecutionClients().Running() {
+			balance, err := ec.BalanceAt(ctx, executionAddress, nil)
+			if err != nil {
+				t.Fatalf(
+					"FAIL: Error getting balance of orphaned withdraw account: %v",
+					err,
+				)
+			}
+			if balance.Cmp(common.Big0) != 0 {
+				t.Fatalf(
+					"FAIL: Orphaned withdraw account not empty: %d",
+					balance,
+				)
+			}
+		}
+		t.Logf(
+			"INFO: Balance correctly empty for orphaned validator withdraw account %s (validator %d)",
+			executionAddress,
+			v.Index,
+		)
+	}
+
+	PrintWithdrawalHistory(
+		ctx,
+		testnet.BeaconClients().Running()[0],
+		eth2api.BlockHead,
+	)
+}
 
 // Builder testnet.
 func (ts BuilderWithdrawalsTestSpec) Execute(

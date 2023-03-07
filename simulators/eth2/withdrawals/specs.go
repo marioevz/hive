@@ -234,6 +234,38 @@ func (ts BaseWithdrawalsTestSpec) GetValidatorKeys(
 	return keys
 }
 
+type ReOrgWithdrawalsTestSpec struct {
+	BaseWithdrawalsTestSpec
+}
+
+func (ts ReOrgWithdrawalsTestSpec) GetTestnetConfig(
+	allNodeDefinitions clients.NodeDefinitions,
+) *testnet.Config {
+	config := ts.BaseWithdrawalsTestSpec.GetTestnetConfig(allNodeDefinitions)
+
+	config.NodeDefinitions = clients.NodeDefinitions{
+		config.NodeDefinitions[0],
+		config.NodeDefinitions[0],
+		config.NodeDefinitions[1],
+		config.NodeDefinitions[1],
+		config.NodeDefinitions[0],
+	}
+
+	// First two nodes are launched in isolation
+	config.NodeDefinitions[0].Subnet = "A"
+	config.NodeDefinitions[1].Subnet = "A"
+	config.NodeDefinitions[2].Subnet = "B"
+	config.NodeDefinitions[3].Subnet = "B"
+
+	// Third node is not launched at the beginning, but when it does
+	// it will connect to both the other clients
+	config.NodeDefinitions[4].Subnet = ""
+	config.NodeDefinitions[4].ValidatorShares = 0
+	config.NodeDefinitions[4].DisableStartup = true
+
+	return config
+}
+
 var REQUIRES_FINALIZATION_TO_ACTIVATE_BUILDER = []string{
 	"lighthouse",
 	"teku",

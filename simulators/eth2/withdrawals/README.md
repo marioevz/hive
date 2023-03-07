@@ -113,54 +113,26 @@ document.
 
 ### Withdrawals During Re-Orgs
 
-* [ ] Partial Withdrawal of Validators on Re-Org
+* [X] Full/Partial Withdrawals and BLS Changes on Re-Org
   <details>
   <summary>Click for details</summary>
   
-  - Start three validating nodes on Capella/Shanghai genesis
-  - Two nodes, `A` and `B`, are connected to each other, and one node `C` is disconnected from the others
+  - Start four validating nodes on Capella/Shanghai genesis
+  - Two pairs of nodes, `A` (`A1` + `A2`) and `B` (`B1` + `B2`), are connected only between each other.
   - Total of 128 Validators, 42 for each validating node
   - All genesis validators have BLS withdrawal credentials
-  - On Epoch 0, submit BLS-To-Execution changes to node `C` of all the validating keys contained in this same node
+  - On Epoch 0, submit BLS-To-Execution changes to each pair `A` and `B`, but the execution addresses are different on each pair.
+  - Wait for all the withdrawals credentials of all validators to be updated on both pairs
+  - Wait for all validators to fully or partially withdraw on both pairs
+  - Start a fifth node `C1` that connects to all nodes `A` and `B`
+  - Wait until all nodes converge into a canonical head
   - Verify that:
-    - BLS-To-Execution changes are included in node `C` chain
-    - Partial withdrawals on node `C` execution client
-  - Submit BLS-To-Execution changes to nodes `A` and `B` of all the validating keys contained in node `C`, but the execution addresses must differ of the ones originally submitted to node `C`
-  - Connect node `C` to nodes `A` and `B`
-  - Wait until node `C` re-orgs to chain formed by nodes `A` and `B`
-  - Verify on the beacon state `C`:
-    - Withdrawal credentials are correctly updated to the execution addresses specified on nodes `A` and `B`
-  - Verify on the execution client:
-    - Withdrawal addresses specified on node `C` are empty
-    - Withdrawal addresses specified on node `A` and `B` are partially withdrawing
+    - BLS-To-Execution changes of one of the pair's chain become canonical
+    - Withdrawals of one of the pair's chain become canonical
+    - Execution addresses of the canonical pair's chain have the correct fully or partial amounts
+    - Execution addresses of the orphaned chain are empty
 
   </details>
-
-* [ ] Full Withdrawal of Validators on Re-Org
-  <details>
-  <summary>Click for details</summary>
-  
-  - Start three validating nodes on Capella/Shanghai genesis
-  - Two nodes, `A` and `B`, are connected to each other, and one node `C` is disconnected from the others
-  - Total of 128 Validators, 42 for each validating node
-  - All genesis validators have BLS withdrawal credentials
-  - 1 every 8 validators start on Voluntary Exit state
-  - 1 every 8 validators start on Slashed state
-  - On Epoch 0, submit BLS-To-Execution changes to node `C` of all the inactive validating keys
-  - Verify that:
-    - BLS-To-Execution changes are included in node `C` chain
-    - Full withdrawals on node `C` execution client
-  - Submit BLS-To-Execution changes to nodes `A` and `B` of all the exited validating keys, but the execution addresses must differ of the ones originally submitted to node `C`
-  - Connect node `C` to nodes `A` and `B`
-  - Wait until node `C` re-orgs to chain formed by nodes `A` and `B`
-  - Verify on the beacon state `C`:
-    - Withdrawal credentials are correctly updated to the execution addresses specified on nodes `A` and `B`
-  - Verify on the execution client:
-    - Withdrawal addresses specified on node `C` are empty
-    - Withdrawal addresses specified on node `A` and `B` are fully withdrawing
-
-  </details>
-
 
 ### Builder API Fallback for Withdrawals
 

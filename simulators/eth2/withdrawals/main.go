@@ -91,6 +91,26 @@ var tests = []TestSpec{
 	},
 }
 
+var reorgTests = []TestSpec{
+	ReOrgWithdrawalsTestSpec{
+		BaseWithdrawalsTestSpec: BaseWithdrawalsTestSpec{
+			Name: "test-bls-to-execution-changes-reorg",
+			Description: `
+			Test sending different BLS-to-execution changes to different
+			forks of the chain.
+			Then test re-org'ing into a single canonical chain and verify
+			coherent withdrawal addresses for all validators.
+			`,
+			// We re-org starting from capella
+			CapellaGenesis: true,
+			// All validators have BLS withdrawal credentials at start
+			GenesisExecutionWithdrawalCredentialsShares: 0,
+			// Some validators do full withdrawals
+			GenesisExitedShares: 4,
+		},
+	},
+}
+
 var builderTests = []TestSpec{
 	BuilderWithdrawalsTestSpec{
 		BaseWithdrawalsTestSpec: BaseWithdrawalsTestSpec{
@@ -171,6 +191,10 @@ func main() {
 		Name:        "eth2-withdrawals",
 		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Shanghai+Capella.`,
 	}
+	withdrawalsReorgSuite := hivesim.Suite{
+		Name:        "eth2-withdrawals-re-org",
+		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Shanghai+Capella, and produce re-org of withdrawals`,
+	}
 	builderSuite := hivesim.Suite{
 		Name:        "eth2-withdrawals-builder",
 		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet and builder API for Shanghai+Capella.`,
@@ -178,10 +202,12 @@ func main() {
 
 	// Add all tests to the suites
 	addAllTests(&withdrawalsSuite, c, tests)
+	addAllTests(&withdrawalsReorgSuite, c, reorgTests)
 	addAllTests(&builderSuite, c, builderTests)
 
 	// Mark suites for execution
 	hivesim.MustRunSuite(sim, withdrawalsSuite)
+	hivesim.MustRunSuite(sim, withdrawalsReorgSuite)
 	hivesim.MustRunSuite(sim, builderSuite)
 }
 
