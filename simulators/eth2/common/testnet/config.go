@@ -16,15 +16,21 @@ var (
 )
 
 type Config struct {
-	AltairForkEpoch                 *big.Int
-	BellatrixForkEpoch              *big.Int
-	CapellaForkEpoch                *big.Int
-	ValidatorCount                  *big.Int
-	KeyTranches                     *big.Int
+	// Fork configuration
+	AltairForkEpoch    *big.Int
+	BellatrixForkEpoch *big.Int
+	CapellaForkEpoch   *big.Int
+
+	// Validators config
+	ValidatorCount        *big.Int
+	KeyTranches           *big.Int
+	ExtraShares           *big.Int
+	BeaconClientValidator bool
+
+	// Chain Config
 	SlotTime                        *big.Int
 	TerminalTotalDifficulty         *big.Int
 	SafeSlotsToImportOptimistically *big.Int
-	ExtraShares                     *big.Int
 
 	// Node configurations to launch. Each node as a proportional share of
 	// validators.
@@ -72,6 +78,8 @@ func (a *Config) Join(b *Config) *Config {
 		b.SafeSlotsToImportOptimistically,
 	)
 	c.ExtraShares = choose(a.ExtraShares, b.ExtraShares)
+	c.BeaconClientValidator = b.BeaconClientValidator ||
+		a.BeaconClientValidator
 
 	// EL config
 	c.InitialBaseFeePerGas = choose(

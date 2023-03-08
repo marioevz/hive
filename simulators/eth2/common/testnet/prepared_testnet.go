@@ -412,6 +412,7 @@ func (p *PreparedTestnet) prepareBeaconNode(
 	beaconDef *hivesim.ClientDefinition,
 	enableBuilders bool,
 	builderOptions []mock_builder.Option,
+	beaconClientValidator bool,
 	config clients.BeaconClientConfig,
 	eth1Endpoints ...*clients.ExecutionClient,
 ) *clients.BeaconClient {
@@ -430,7 +431,7 @@ func (p *PreparedTestnet) prepareBeaconNode(
 		HiveClientDefinition: beaconDef,
 	}
 
-	cl := &clients.BeaconClient{
+	bn := &clients.BeaconClient{
 		Client: cm,
 		Logger: testnet.T,
 		Config: config,
@@ -460,15 +461,29 @@ func (p *PreparedTestnet) prepareBeaconNode(
 			options = append(options, builderOptions...)
 		}
 
-		cl.Builder, err = mock_builder.NewMockBuilder(
+		bn.Builder, err = mock_builder.NewMockBuilder(
 			context.Background(),
 			eth1Endpoints[0],
-			cl,
+			bn,
 			options...,
 		)
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	var keys map[common.ValidatorIndex]*cl.KeyDetails
+
+	if beaconClientValidator {
+		keyIndex := config.ClientIndex
+		if keyIndex >= len(p.keyTranches) {
+			testnet.Fatalf(
+				"only have %d key tranches, cannot find index %d for VC",
+				len(p.keyTranches),
+				keyIndex,
+			)
+		}
+		keys = p.keyTranches[keyIndex]
 	}
 
 	// This method will return the options used to run the client.
@@ -513,6 +528,10 @@ func (p *PreparedTestnet) prepareBeaconNode(
 			),
 		})
 
+		if keys != nil {
+			opts = append(opts, cl.KeysBundle(keys))
+		}
+
 		currentlyRunningBcs := testnet.BeaconClients().
 			Running().
 			Subnet(config.Subnet)
@@ -546,9 +565,9 @@ func (p *PreparedTestnet) prepareBeaconNode(
 			},
 		)
 
-		if cl.Builder != nil {
+		if bn.Builder != nil {
 			opts = append(opts, hivesim.Params{
-				"HIVE_ETH2_BUILDER_ENDPOINT": cl.Builder.Address(),
+				"HIVE_ETH2_BUILDER_ENDPOINT": bn.Builder.Address(),
 			})
 		}
 
@@ -560,7 +579,7 @@ func (p *PreparedTestnet) prepareBeaconNode(
 		return opts, nil
 	}
 
-	return cl
+	return bn
 }
 
 // Prepares a validator client object with all the necessary information

@@ -232,6 +232,7 @@ func StartTestnet(
 				beaconDef,
 				config.EnableBuilders,
 				config.BuilderOptions,
+				config.BeaconClientValidator,
 				clients.BeaconClientConfig{
 					ClientIndex:             nodeIndex,
 					TerminalTotalDifficulty: beaconTTD,
@@ -243,13 +244,16 @@ func StartTestnet(
 				nodeClient.ExecutionClient,
 			)
 
-			nodeClient.ValidatorClient = prep.prepareValidatorClient(
-				parentCtx,
-				testnet,
-				validatorDef,
-				nodeClient.BeaconClient,
-				nodeIndex,
-			)
+			if !config.BeaconClientValidator {
+				nodeClient.ValidatorClient = prep.prepareValidatorClient(
+					parentCtx,
+					testnet,
+					validatorDef,
+					nodeClient.BeaconClient,
+					nodeIndex,
+				)
+			}
+
 		}
 
 		// Add rest of properties

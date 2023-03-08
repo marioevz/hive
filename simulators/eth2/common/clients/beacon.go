@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/ethereum/hive/simulators/eth2/common/builder"
+	consensus_config "github.com/ethereum/hive/simulators/eth2/common/config/consensus"
 	"github.com/ethereum/hive/simulators/eth2/common/utils"
 	"github.com/holiman/uint256"
 	"github.com/protolambda/eth2api"
@@ -49,6 +50,7 @@ type BeaconClientConfig struct {
 	GenesisValidatorsRoot   *tree.Root
 	GenesisTime             *common.Timestamp
 	Subnet                  string
+	Keys                    map[common.ValidatorIndex]*consensus_config.KeyDetails
 }
 
 type BeaconStateCache struct {
