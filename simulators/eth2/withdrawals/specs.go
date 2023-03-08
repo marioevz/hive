@@ -263,6 +263,8 @@ func (ts ReOrgWithdrawalsTestSpec) GetTestnetConfig(
 	config.NodeDefinitions[4].ValidatorShares = 0
 	config.NodeDefinitions[4].DisableStartup = true
 
+	config.BeaconClientValidator = true
+
 	return config
 }
 
