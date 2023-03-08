@@ -54,6 +54,21 @@ if [ "$HIVE_ETH2_MERGE_ENABLED" != "" ]; then
     merge_option="--ee-endpoint=$HIVE_ETH2_ETH1_ENGINE_RPC_ADDRS --ee-jwt-secret-file=/jwtsecret"
 fi
 
+if [ -d "/hive/input/keystores" ] && [ -d "/hive/input/secrets" ]; then
+    # Beacon client is also validator client
+    mkdir -p /data/validators/keys
+    mkdir -p /data/validators/passwords
+
+
+    for keystore_path in /hive/input/keystores/*
+    do
+        pubkey=$(basename "$keystore_path")
+        cp "/hive/input/keystores/$pubkey/keystore.json" "/data/validators/keys/voting-keystore-$pubkey.json"
+        cp "/hive/input/secrets/$pubkey" "/data/validators/passwords/voting-keystore-$pubkey.txt"
+    done
+    validator_option="--validator-keys=/data/validators/keys:/data/validators/passwords"
+fi
+
 echo Starting Teku Beacon Node
 
 /opt/teku/bin/teku \
@@ -64,6 +79,7 @@ echo Starting Teku Beacon Node
     --log-destination console \
     --logging="$LOG" \
     $metrics_option $eth1_option $merge_option $enr_option $static_option $opt_sync_option $builder_option \
+    $validator_option \
     --validators-proposer-default-fee-recipient="0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b" \
     --p2p-port="${HIVE_ETH2_P2P_TCP_PORT:-9000}" \
     --p2p-udp-port="${HIVE_ETH2_P2P_UDP_PORT:-9000}" \
