@@ -61,6 +61,13 @@ echo BUILDER=$builder_option
 
 echo -n "0x7365637265747365637265747365637265747365637265747365637265747365" > /jwtsecret
 
+if [ -d "/hive/input/keystores" ] && [ -d "/hive/input/secrets" ]; then
+    # Beacon client is also validator client
+    chmod 0600 /hive/input/secrets/*
+
+    validator_option="--validators-dir=/hive/input/keystores --secrets-dir=/hive/input/secrets"
+fi
+
 echo Starting Nimbus Beacon Node
 
 /usr/bin/nimbus_beacon_node \
@@ -71,7 +78,7 @@ echo Starting Nimbus Beacon Node
     --web3-url="$HIVE_ETH2_ETH1_ENGINE_RPC_ADDRS" \
     --jwt-secret=/jwtsecret \
     --num-threads=4 \
-    $bootnodes_option $metrics_option $builder_option \
+    $bootnodes_option $metrics_option $builder_option $validator_option \
     --nat="extip:${CONTAINER_IP}" \
     --listen-address=0.0.0.0 \
     --tcp-port="${HIVE_ETH2_P2P_TCP_PORT:-9000}" \
