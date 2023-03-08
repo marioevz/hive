@@ -353,16 +353,15 @@ func (ts ReOrgWithdrawalsTestSpec) Execute(
 				v.WithdrawAddress = &addr
 			}
 		}
-		for _, b := range bns {
-			if err := allValidatorsPerBeacon[i].SendSignedBLSToExecutionChanges(ctx, b); err != nil {
-				t.Fatalf(
-					"FAIL: Unable to submit bls-to-execution changes to beacon %d: %v",
-					i,
-					err,
-				)
-			} else {
-				t.Logf("INFO: Sent validator BLS changes to beacon %d", b.Config.ClientIndex)
-			}
+		b := bns[0]
+		if err := allValidatorsPerBeacon[i].SendSignedBLSToExecutionChanges(ctx, b); err != nil {
+			t.Fatalf(
+				"FAIL: Unable to submit bls-to-execution changes to beacon %d: %v",
+				i,
+				err,
+			)
+		} else {
+			t.Logf("INFO: Sent validator BLS changes to beacon %d", b.Config.ClientIndex)
 		}
 	}
 
@@ -420,14 +419,14 @@ func (ts ReOrgWithdrawalsTestSpec) Execute(
 					}
 					if validatorsUpdatedCount == len(vs) {
 						t.Logf(
-							"INFO: all %d validators updated",
-							validatorsUpdatedCount,
+							"INFO: beacon %d: all %d validators updated",
+							bIdx, validatorsUpdatedCount,
 						)
 						return
 					} else {
 						t.Logf(
-							"INFO: %d validators out of %d updated",
-							validatorsUpdatedCount,
+							"INFO: beacon %d: %d validators out of %d updated",
+							bIdx, validatorsUpdatedCount,
 							len(vs),
 						)
 					}
@@ -450,7 +449,7 @@ func (ts ReOrgWithdrawalsTestSpec) Execute(
 	wg.Wait()
 
 	select {
-	case <-ctx.Done():
+	case <-timeoutCtx.Done():
 		t.Fatalf("FAIL: Timeout while waiting for BLS changes inclusion")
 	case err := <-errs:
 		t.Fatalf(
