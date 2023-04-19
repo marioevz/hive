@@ -330,6 +330,8 @@ func (ec *HiveRPCEngineClient) PrepareDefaultAuthCallToken() error {
 }
 
 // Engine API Call Methods
+
+// Forkchoice Updated API Calls
 func (ec *HiveRPCEngineClient) ForkchoiceUpdated(ctx context.Context, version int, fcState *api.ForkchoiceStateV1, pAttributes *api.PayloadAttributes) (api.ForkChoiceResponse, error) {
 	var result api.ForkChoiceResponse
 	if err := ec.PrepareDefaultAuthCallToken(); err != nil {
@@ -354,6 +356,8 @@ func (ec *HiveRPCEngineClient) ForkchoiceUpdatedV2(ctx context.Context, fcState 
 	return ec.ForkchoiceUpdated(ctx, 2, fcState, pAttributes)
 }
 
+// Get Payload API Calls
+
 func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, error) {
 	var (
 		executableData api.ExecutableData
@@ -366,7 +370,7 @@ func (ec *HiveRPCEngineClient) GetPayload(ctx context.Context, version int, payl
 		return executableData, nil, err
 	}
 
-	if version == 2 {
+	if version >= 2 {
 		var response api.ExecutionPayloadEnvelope
 		err = ec.c.CallContext(ctx, &response, rpcString, payloadId)
 		if response.ExecutionPayload != nil {
@@ -389,6 +393,11 @@ func (ec *HiveRPCEngineClient) GetPayloadV2(ctx context.Context, payloadId *api.
 	return ec.GetPayload(ctx, 2, payloadId)
 }
 
+func (ec *HiveRPCEngineClient) GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, error) {
+	return ec.GetPayload(ctx, 3, payloadId)
+}
+
+// Get Payload Bodies API Calls
 func (ec *HiveRPCEngineClient) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error) {
 	var (
 		result []*client_types.ExecutionPayloadBodyV1
@@ -415,6 +424,7 @@ func (ec *HiveRPCEngineClient) GetPayloadBodiesByHashV1(ctx context.Context, has
 	return result, err
 }
 
+// New Payload API Call Methods
 func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payload interface{}) (api.PayloadStatusV1, error) {
 	var result api.PayloadStatusV1
 	if err := ec.PrepareDefaultAuthCallToken(); err != nil {
@@ -436,6 +446,12 @@ func (ec *HiveRPCEngineClient) NewPayloadV2(ctx context.Context, payload *api.Ex
 	return ec.NewPayload(ctx, 2, payload)
 }
 
+func (ec *HiveRPCEngineClient) NewPayloadV3(ctx context.Context, payload *api.ExecutableData) (api.PayloadStatusV1, error) {
+	ec.latestPayloadSent = payload
+	return ec.NewPayload(ctx, 3, payload)
+}
+
+// Exchange Transition Configuration API Call Methods
 func (ec *HiveRPCEngineClient) ExchangeTransitionConfigurationV1(ctx context.Context, tConf *api.TransitionConfigurationV1) (api.TransitionConfigurationV1, error) {
 	var result api.TransitionConfigurationV1
 	err := ec.c.CallContext(ctx, &result, "engine_exchangeTransitionConfigurationV1", tConf)
@@ -451,6 +467,7 @@ func (ec *HiveRPCEngineClient) ExchangeCapabilities(ctx context.Context, clCapab
 	return result, err
 }
 
+// Account Nonce
 func (ec *HiveRPCEngineClient) GetNextAccountNonce(testCtx context.Context, account common.Address) (uint64, error) {
 	// First get the current head of the client where we will send the tx
 	ctx, cancel := context.WithTimeout(testCtx, globals.RPCTimeout)

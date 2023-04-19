@@ -616,7 +616,7 @@ func (v *validator) ValidateState(block *types.Block, state *state.StateDB, rece
 
 type processor struct{}
 
-func (p *processor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
+func (p *processor) Process(block *types.Block, excessDataGas *big.Int, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	return types.Receipts{}, []*types.Log{}, 21000, nil
 }
 
@@ -656,7 +656,7 @@ func (n *GethNode) SetBlock(block *types.Block, parentNumber uint64, parentRoot 
 	}
 	statedb.StartPrefetcher("chain")
 	var failedProcessing bool
-	receipts, _, _, err := n.eth.BlockChain().Processor().Process(block, statedb, *n.eth.BlockChain().GetVMConfig())
+	receipts, _, _, err := n.eth.BlockChain().Processor().Process(block, n.eth.BlockChain().CurrentBlock().ExcessDataGas, statedb, *n.eth.BlockChain().GetVMConfig())
 	if err != nil {
 		failedProcessing = true
 	}
@@ -709,9 +709,16 @@ func (n *GethNode) NewPayload(ctx context.Context, version int, pl interface{}) 
 		} else {
 			return beacon.PayloadStatusV1{}, fmt.Errorf("wrong type %T", pl)
 		}
+	case 3:
+		if c, ok := pl.(*beacon.ExecutableData); ok {
+			return n.NewPayloadV3(ctx, c)
+		} else {
+			return beacon.PayloadStatusV1{}, fmt.Errorf("wrong type %T", pl)
+		}
 	}
 	return beacon.PayloadStatusV1{}, fmt.Errorf("unknown version %d", version)
 }
+
 func (n *GethNode) NewPayloadV1(ctx context.Context, pl *client_types.ExecutableDataV1) (beacon.PayloadStatusV1, error) {
 	ed := pl.ToExecutableData()
 	n.latestPayloadSent = &ed
@@ -719,12 +726,21 @@ func (n *GethNode) NewPayloadV1(ctx context.Context, pl *client_types.Executable
 	n.latestPayloadStatusReponse = &resp
 	return resp, err
 }
+
 func (n *GethNode) NewPayloadV2(ctx context.Context, pl *beacon.ExecutableData) (beacon.PayloadStatusV1, error) {
 	n.latestPayloadSent = pl
 	resp, err := n.api.NewPayloadV2(*pl)
 	n.latestPayloadStatusReponse = &resp
 	return resp, err
 }
+
+func (n *GethNode) NewPayloadV3(ctx context.Context, pl *beacon.ExecutableData) (beacon.PayloadStatusV1, error) {
+	n.latestPayloadSent = pl
+	resp, err := n.api.NewPayloadV3(*pl)
+	n.latestPayloadStatusReponse = &resp
+	return resp, err
+}
+
 func (n *GethNode) ForkchoiceUpdated(ctx context.Context, version int, fcs *beacon.ForkchoiceStateV1, payload *beacon.PayloadAttributes) (beacon.ForkChoiceResponse, error) {
 	switch version {
 	case 1:
@@ -761,6 +777,14 @@ func (n *GethNode) GetPayloadV1(ctx context.Context, payloadId *beacon.PayloadID
 
 func (n *GethNode) GetPayloadV2(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, error) {
 	p, err := n.api.GetPayloadV2(*payloadId)
+	if p == nil || err != nil {
+		return beacon.ExecutableData{}, nil, err
+	}
+	return *p.ExecutionPayload, p.BlockValue, err
+}
+
+func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, error) {
+	p, err := n.api.GetPayloadV3(*payloadId)
 	if p == nil || err != nil {
 		return beacon.ExecutableData{}, nil, err
 	}

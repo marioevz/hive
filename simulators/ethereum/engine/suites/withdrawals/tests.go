@@ -937,8 +937,8 @@ func (ws *WithdrawalsBaseSpec) GetWithdrawalsForkTime() uint64 {
 }
 
 // Generates the fork config, including withdrawals fork timestamp.
-func (ws *WithdrawalsBaseSpec) GetForkConfig() test.ForkConfig {
-	return test.ForkConfig{
+func (ws *WithdrawalsBaseSpec) GetForkConfig() globals.ForkConfig {
+	return globals.ForkConfig{
 		ShanghaiTimestamp: big.NewInt(int64(ws.GetWithdrawalsForkTime())),
 	}
 }

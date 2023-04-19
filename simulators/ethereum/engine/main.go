@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 
 	suite_auth "github.com/ethereum/hive/simulators/ethereum/engine/suites/auth"
+	suite_blobs "github.com/ethereum/hive/simulators/ethereum/engine/suites/blobs"
 	suite_engine "github.com/ethereum/hive/simulators/ethereum/engine/suites/engine"
 	suite_ex_cap "github.com/ethereum/hive/simulators/ethereum/engine/suites/exchange_capabilities"
 	suite_transition "github.com/ethereum/hive/simulators/ethereum/engine/suites/transition"
@@ -51,6 +52,11 @@ func main() {
 			Description: `
 	Test Engine API withdrawals, pre/post Shanghai.`[1:],
 		}
+		blobs = hivesim.Suite{
+			Name: "engine-blobs",
+			Description: `
+	Test Engine API Blobs.`[1:],
+		}
 	)
 
 	simulator := hivesim.New()
@@ -61,6 +67,7 @@ func main() {
 	addTestsToSuite(simulator, &excap, specToInterface(suite_ex_cap.Tests), "full")
 	//suite_sync.AddSyncTestsToSuite(simulator, &sync, suite_sync.Tests)
 	addTestsToSuite(simulator, &withdrawals, suite_withdrawals.Tests, "full")
+	addTestsToSuite(simulator, &blobs, suite_blobs.Tests, "full")
 
 	// Mark suites for execution
 	hivesim.MustRunSuite(simulator, engine)
@@ -69,6 +76,7 @@ func main() {
 	hivesim.MustRunSuite(simulator, excap)
 	hivesim.MustRunSuite(simulator, sync)
 	hivesim.MustRunSuite(simulator, withdrawals)
+	hivesim.MustRunSuite(simulator, blobs)
 }
 
 func specToInterface(src []test.Spec) []test.SpecInterface {
@@ -100,6 +108,9 @@ func addTestsToSuite(sim *hivesim.Simulation, suite *hivesim.Suite, tests []test
 			newParams = newParams.Set("HIVE_SHANGHAI_TIMESTAMP", fmt.Sprintf("%d", currentTest.GetForkConfig().ShanghaiTimestamp))
 			// Ensure the merge transition is activated before shanghai.
 			newParams = newParams.Set("HIVE_MERGE_BLOCK_ID", "0")
+			if currentTest.GetForkConfig().ShardingForkTimestamp != nil {
+				newParams = newParams.Set("HIVE_SHARDING_FORK_TIMESTAMP", fmt.Sprintf("%d", currentTest.GetForkConfig().ShardingForkTimestamp))
+			}
 		}
 
 		if nodeType != "" {

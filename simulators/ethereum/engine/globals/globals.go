@@ -69,3 +69,9 @@ var (
 		"HIVE_MERGE_BLOCK_ID": "100",
 	}
 )
+
+// Global types
+type ForkConfig struct {
+	ShanghaiTimestamp     *big.Int
+	ShardingForkTimestamp *big.Int
+}
