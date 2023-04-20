@@ -21,6 +21,8 @@ import (
 	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	"github.com/holiman/uint256"
+	"github.com/protolambda/ztyp/view"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -401,11 +403,7 @@ func (tc *BaseTransactionCreator) MakeTransaction(nonce uint64) (*types.Transact
 	if key == nil {
 		key = globals.VaultKey
 	}
-	signedTx, err := types.SignTx(tx, types.NewLondonSigner(globals.ChainID), key)
-	if err != nil {
-		return nil, err
-	}
-	return signedTx, nil
+	return types.SignTx(tx, types.NewLondonSigner(globals.ChainID), key)
 }
 
 // Create a contract filled with zeros without going over the specified GasLimit
@@ -470,6 +468,104 @@ func (tc *BigInitcodeTransactionCreator) MakeTransaction(nonce uint64) (*types.T
 		panic("invalid configuration for big contract tx creator")
 	}
 	return tc.BaseTransactionCreator.MakeTransaction(nonce)
+}
+
+// Blob transaction creator
+type BlobTransactionCreator struct {
+	To         *common.Address
+	GasLimit   uint64
+	GasFee     *big.Int
+	GasTip     *big.Int
+	DataGasFee *big.Int
+	BlobId     uint64
+	Value      *big.Int
+	Data       []byte
+	PrivateKey *ecdsa.PrivateKey
+}
+
+func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
+	// Need tx wrap data that will pass blob verification
+	if tc.BlobId != 0 {
+		return nil, fmt.Errorf("blob id greater than zero not yet supported")
+	}
+	blobData := &types.BlobTxWrapData{
+		BlobKzgs: []types.KZGCommitment{
+			{0xc0},
+		},
+		Blobs: []types.Blob{
+			{},
+		},
+	}
+	var hashes []common.Hash
+	for i := 0; i < len(blobData.BlobKzgs); i++ {
+		hashes = append(hashes, blobData.BlobKzgs[i].ComputeVersionedHash())
+	}
+	_, _, proofs, err := blobData.Blobs.ComputeCommitmentsAndProofs()
+	if err != nil {
+		return nil, err
+	}
+	blobData.Proofs = proofs
+
+	var address *types.AddressSSZ
+	if tc.To != nil {
+		to_ssz := types.AddressSSZ(*tc.To)
+		address = &to_ssz
+	}
+	var data types.TxDataView
+	if tc.Data != nil {
+		data = types.TxDataView(tc.Data)
+	}
+
+	// Gas Tip
+	gasTip := tc.GasTip
+	if gasTip == nil {
+		gasTip = globals.GasTipPrice
+	}
+	gasTipUint256, _ := uint256.FromBig(gasTip)
+
+	// Gas Fee
+	gasFee := tc.GasFee
+	if gasFee == nil {
+		gasFee = globals.GasPrice
+	}
+	gasFeeUint256, _ := uint256.FromBig(gasFee)
+
+	// Data Gas Fee
+	dataGasFee := tc.DataGasFee
+	if dataGasFee == nil {
+		dataGasFee = big.NewInt(1)
+	}
+	dataGasFeeUint256, _ := uint256.FromBig(dataGasFee)
+
+	// Value
+	value := tc.Value
+	if value == nil {
+		value = big.NewInt(0)
+	}
+	valueUint256, _ := uint256.FromBig(value)
+
+	sbtx := &types.SignedBlobTx{
+		Message: types.BlobTxMessage{
+			Nonce:               view.Uint64View(nonce),
+			GasTipCap:           view.Uint256View(*gasTipUint256),
+			GasFeeCap:           view.Uint256View(*gasFeeUint256),
+			Gas:                 view.Uint64View(tc.GasLimit),
+			To:                  types.AddressOptionalSSZ{address},
+			Value:               view.Uint256View(*valueUint256),
+			Data:                data,
+			AccessList:          nil,
+			MaxFeePerDataGas:    view.Uint256View(*dataGasFeeUint256),
+			BlobVersionedHashes: hashes,
+		},
+	}
+	sbtx.Message.ChainID.SetFromBig(globals.ChainID)
+
+	key := tc.PrivateKey
+	if key == nil {
+		key = globals.VaultKey
+	}
+
+	return types.SignNewTx(key, types.NewDankSigner(globals.ChainID), sbtx, types.WithTxWrapData(blobData))
 }
 
 // Determines if the error we got from sending the raw tx is because the client
