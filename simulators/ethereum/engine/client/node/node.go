@@ -952,6 +952,23 @@ func (n *GethNode) ID() string {
 	return n.node.Config().Name
 }
 
+func (n *GethNode) GetLastAccountNonce(testCtx context.Context, account common.Address) (uint64, error) {
+	// First get the current head of the client where we will send the tx
+	head, err := n.eth.APIBackend.BlockByNumber(testCtx, LatestBlockNumber)
+	if err != nil {
+		return 0, err
+	}
+
+	// Then check if we have any info about this account, and when it was last updated
+	if accTxInfo, ok := n.accTxInfoMap[account]; ok && accTxInfo != nil && (accTxInfo.PreviousBlock == head.Hash() || accTxInfo.PreviousBlock == head.ParentHash()) {
+		// We have info about this account and is up to date (or up to date until the very last block).
+		// Return the previous nonce
+		return accTxInfo.PreviousNonce, nil
+	}
+	// We don't have info about this account, so there is no previous nonce
+	return 0, fmt.Errorf("no previous nonce for account %s", account.String())
+}
+
 func (n *GethNode) GetNextAccountNonce(testCtx context.Context, account common.Address) (uint64, error) {
 	// First get the current head of the client where we will send the tx
 	head, err := n.eth.APIBackend.BlockByNumber(testCtx, LatestBlockNumber)

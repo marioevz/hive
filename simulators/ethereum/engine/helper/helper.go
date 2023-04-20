@@ -627,3 +627,29 @@ func SendNextTransactions(testCtx context.Context, node client.EngineClient, txC
 	node.UpdateNonce(testCtx, globals.VaultAccountAddress, nonce+txCount)
 	return txs, nil
 }
+
+func ReplaceLastTransaction(testCtx context.Context, node client.EngineClient, txCreator TransactionCreator) (*types.Transaction, error) {
+	nonce, err := node.GetLastAccountNonce(testCtx, globals.VaultAccountAddress)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := txCreator.MakeTransaction(nonce)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		ctx, cancel := context.WithTimeout(testCtx, globals.RPCTimeout)
+		defer cancel()
+		err := node.SendTransaction(ctx, tx)
+		if err == nil {
+			return tx, nil
+		} else if SentTxAlreadyKnown(err) {
+			return tx, nil
+		}
+		select {
+		case <-time.After(time.Second):
+		case <-testCtx.Done():
+			return nil, testCtx.Err()
+		}
+	}
+}
