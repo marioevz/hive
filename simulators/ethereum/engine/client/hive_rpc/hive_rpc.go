@@ -424,6 +424,20 @@ func (ec *HiveRPCEngineClient) GetPayloadBodiesByHashV1(ctx context.Context, has
 	return result, err
 }
 
+// Get Blob Bundle API Calls
+func (ec *HiveRPCEngineClient) GetBlobsBundleV1(ctx context.Context, payloadId *api.PayloadID) (*api.BlobsBundle, error) {
+	var (
+		result api.BlobsBundle
+		err    error
+	)
+	if err = ec.PrepareDefaultAuthCallToken(); err != nil {
+		return nil, err
+	}
+
+	err = ec.c.CallContext(ctx, &result, "engine_getBlobsBundleV1", payloadId)
+	return &result, err
+}
+
 // New Payload API Call Methods
 func (ec *HiveRPCEngineClient) NewPayload(ctx context.Context, version int, payload interface{}) (api.PayloadStatusV1, error) {
 	var result api.PayloadStatusV1

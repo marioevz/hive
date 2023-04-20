@@ -46,6 +46,8 @@ type Engine interface {
 	GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error)
 	GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*client_types.ExecutionPayloadBodyV1, error)
 
+	GetBlobsBundleV1(ctx context.Context, payloadId *api.PayloadID) (*api.BlobsBundle, error)
+
 	LatestForkchoiceSent() (fcState *api.ForkchoiceStateV1, pAttributes *api.PayloadAttributes)
 	LatestNewPayloadSent() (payload *api.ExecutableData)
 

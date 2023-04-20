@@ -799,6 +799,10 @@ func (n *GethNode) GetPayloadBodiesByHashV1(ctx context.Context, hashes []common
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (n *GethNode) GetBlobsBundleV1(ctx context.Context, payloadId *beacon.PayloadID) (*beacon.BlobsBundle, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 // Eth JSON RPC
 const (
 	SafeBlockNumber      = rpc.BlockNumber(-4) // This is not yet true
@@ -911,6 +915,10 @@ func (n *GethNode) NonceAt(ctx context.Context, account common.Address, blockNum
 }
 
 func (n *GethNode) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+	panic("NOT IMPLEMENTED")
+}
+
+func (n *GethNode) PendingTransactionCount(ctx context.Context) (uint, error) {
 	panic("NOT IMPLEMENTED")
 }
 
