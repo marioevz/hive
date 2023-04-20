@@ -2,20 +2,23 @@
 package suite_blobs
 
 import (
+	"bytes"
 	"context"
-	"crypto/ecdsa"
+	"encoding/hex"
+	"fmt"
 	"math/big"
+	"reflect"
 	"time"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
-	"github.com/holiman/uint256"
-	"github.com/protolambda/ztyp/view"
 )
 
 var (
@@ -28,6 +31,8 @@ var (
 
 	DATAHASH_START_ADDRESS = big.NewInt(0x100)
 	DATAHASH_ADDRESS_COUNT = 1000
+
+	MAX_BLOBS_PER_BLOCK = 4
 )
 
 // Execution specification reference:
@@ -44,18 +49,40 @@ var Tests = []test.SpecInterface{
 			`,
 		},
 		BlobsForkHeight: 0,
-		BlobsBlockCount: 2, // Genesis is a withdrawals block
-		BlobTxsPerBlock: 4,
+		TestBlobPayloads: []TestBlobPayload{
+			{
+				// We send a blob transaction on genesis, and this same
+				// transaction should be included in the first block.
+				BlobTransactionSendCount:      2,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				NormalTransactionSendCount:    0,
+				ExpectedIncludedBlobCount:     2,
+			},
+		},
 	},
 }
 
+// Test Blob Payload Descriptor
+type TestBlobPayload struct {
+	// Number of blob transactions to send before this block's GetPayload request
+	BlobTransactionSendCount uint64
+	// Max Data Gas Cost for every blob transaction
+	BlobTransactionMaxDataGasCost *big.Int
+	// Number of normal transactions (type 0-2) to send before this block's GetPayload request
+	NormalTransactionSendCount uint64
+	// Number of blob transactions that are expected to be included in the payload
+	ExpectedIncludedBlobCount uint64
+}
+
 // Blobs base spec
+// This struct contains the base spec for all blob tests. It contains the
+// timestamp increments per block, the withdrawals fork height, and the list of
+// payloads to produce during the test.
 type BlobsBaseSpec struct {
 	test.Spec
-	TimeIncrements  uint64 // Timestamp increments per block throughout the test
-	BlobsForkHeight uint64 // Withdrawals activation fork height
-	BlobsBlockCount uint64 // Number of blocks on and after blobs fork activation
-	BlobTxsPerBlock uint64 // Number of blob txs per block
+	TimeIncrements   uint64 // Timestamp increments per block throughout the test
+	BlobsForkHeight  uint64 // Withdrawals activation fork height
+	TestBlobPayloads []TestBlobPayload
 }
 
 // Generates the fork config, including sharding fork timestamp.
@@ -127,87 +154,146 @@ func (bs *BlobsBaseSpec) GetGenesis() *core.Genesis {
 	return genesis
 }
 
-/*
-func (bs *BlobsBaseSpec) VerifyContractsStorage(t *test.Env) {
-	if bs.GetTransactionCountPerPayload() < uint64(len(TX_CONTRACT_ADDRESSES)) {
-		return
-	}
-	// Assume that forkchoice updated has been already sent
-	latestPayloadNumber := t.CLMock.LatestExecutedPayload.Number
-	latestPayloadNumberBig := big.NewInt(int64(latestPayloadNumber))
-
-	r := t.TestEngine.TestStorageAt(WARM_COINBASE_ADDRESS, common.BigToHash(latestPayloadNumberBig), latestPayloadNumberBig)
-	p := t.TestEngine.TestStorageAt(PUSH0_ADDRESS, common.Hash{}, latestPayloadNumberBig)
-	if latestPayloadNumber >= bs.WithdrawalsForkHeight {
-		// Shanghai
-		r.ExpectBigIntStorageEqual(big.NewInt(100))        // WARM_STORAGE_READ_COST
-		p.ExpectBigIntStorageEqual(latestPayloadNumberBig) // tx succeeded
-	} else {
-		// Pre-Shanghai
-		r.ExpectBigIntStorageEqual(big.NewInt(2600)) // COLD_ACCOUNT_ACCESS_COST
-		p.ExpectBigIntStorageEqual(big.NewInt(0))    // tx must've failed
-	}
-}
-*/
-
 // Changes the CL Mocker default time increments of 1 to the value specified
 // in the test spec.
 func (bs *BlobsBaseSpec) ConfigureCLMock(cl *clmock.CLMocker) {
 	cl.BlockTimestampIncrement = big.NewInt(int64(bs.GetBlockTimeIncrements()))
 }
 
-func SendBlobTransaction(parentCtx context.Context, eth client.Eth, to *common.Address, nonce uint64, gaslimit uint64, gasFee uint64, tip uint64, dataGasFee uint64, key *ecdsa.PrivateKey) error {
-	// Need tx wrap data that will pass blob verification
-	blobData := &types.BlobTxWrapData{
-		BlobKzgs: []types.KZGCommitment{
-			{0xc0},
-		},
-		Blobs: []types.Blob{
-			{},
-		},
+type TestBlobTxPool struct {
+	Transactions map[common.Hash]*types.Transaction
+}
+
+func (pool *TestBlobTxPool) VerifyBlobBundle(payload *engine.ExecutableData, blobBundle *engine.BlobsBundle, expectedBlobCount int) error {
+	if payload.BlockHash != blobBundle.BlockHash {
+		return fmt.Errorf("block hash mismatch: %s != %s", payload.BlockHash.String(), blobBundle.BlockHash.String())
 	}
-	var hashes []common.Hash
-	for i := 0; i < len(blobData.BlobKzgs); i++ {
-		hashes = append(hashes, blobData.BlobKzgs[i].ComputeVersionedHash())
+	if len(blobBundle.Blobs) != expectedBlobCount {
+		return fmt.Errorf("expected %d blob, got %d", expectedBlobCount, len(blobBundle.Blobs))
 	}
-	_, _, proofs, err := blobData.Blobs.ComputeCommitmentsAndProofs()
+	if len(blobBundle.KZGs) != expectedBlobCount {
+		return fmt.Errorf("expected %d KZG, got %d", expectedBlobCount, len(blobBundle.KZGs))
+	}
+	// Find all blob transactions included in the payload
+	type BlobWrapData struct {
+		VersionedHash common.Hash
+		KZG           types.KZGCommitment
+		Blob          types.Blob
+		Proof         types.KZGProof
+	}
+	var blobDataInPayload = make([]*BlobWrapData, 0)
+
+	for _, binaryTx := range payload.Transactions {
+		// Unmarshal the tx from the payload, which should be the minimal version
+		// of the blob transaction
+		txData := new(types.Transaction)
+		if err := txData.UnmarshalMinimal(binaryTx); err != nil {
+			return err
+		}
+
+		if txData.Type() != types.BlobTxType {
+			continue
+		}
+
+		// Find the transaction in the current pool of known transactions
+		if tx, ok := pool.Transactions[txData.Hash()]; ok {
+			versionedHashes, kzgs, blobs, proofs := tx.BlobWrapData()
+			if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
+				return fmt.Errorf("invalid blob wrap data")
+			}
+			for i := 0; i < len(versionedHashes); i++ {
+				blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
+					VersionedHash: versionedHashes[i],
+					KZG:           kzgs[i],
+					Blob:          blobs[i],
+					Proof:         proofs[i],
+				})
+			}
+		} else {
+			return fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
+		}
+	}
+
+	// Verify that the calculated amount of blobs in the payload matches the
+	// amount of blobs in the bundle
+	if len(blobDataInPayload) != len(blobBundle.Blobs) {
+		return fmt.Errorf("expected %d blobs in the bundle, got %d", len(blobDataInPayload), len(blobBundle.Blobs))
+	}
+
+	for i, blobData := range blobDataInPayload {
+		bundleKzg := blobBundle.KZGs[i]
+		bundleBlob := blobBundle.Blobs[i]
+		if !bytes.Equal(bundleKzg[:], blobData.KZG[:]) {
+			return fmt.Errorf("KZG mismatch at index %d", i)
+		}
+		if !bytes.Equal(bundleBlob[:], blobData.Blob[:]) {
+			return fmt.Errorf("blob mismatch at index %d", i)
+		}
+	}
+
+	return nil
+}
+
+func (pool *TestBlobTxPool) AddBlobTransaction(tx *types.Transaction) {
+	if pool.Transactions == nil {
+		pool.Transactions = make(map[common.Hash]*types.Transaction)
+	}
+	pool.Transactions[tx.Hash()] = tx
+}
+
+// Test two different transactions with the same blob, and check the blob bundle.
+
+func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx *types.Transaction) error {
+	returnedTx, _, err := eth.TransactionByHash(ctx, tx.Hash())
 	if err != nil {
 		return err
 	}
-	blobData.Proofs = proofs
 
-	var address *types.AddressSSZ
-	if to != nil {
-		to_ssz := types.AddressSSZ(*to)
-		address = &to_ssz
+	// Verify that the tx fields are all the same
+	if returnedTx.Nonce() != tx.Nonce() {
+		return fmt.Errorf("nonce mismatch: %d != %d", returnedTx.Nonce(), tx.Nonce())
 	}
-	sbtx := &types.SignedBlobTx{
-		Message: types.BlobTxMessage{
-			Nonce:               view.Uint64View(nonce),
-			GasTipCap:           view.Uint256View(*uint256.NewInt(tip)),
-			GasFeeCap:           view.Uint256View(*uint256.NewInt(gasFee)),
-			Gas:                 view.Uint64View(gaslimit),
-			To:                  types.AddressOptionalSSZ{address},
-			Value:               view.Uint256View(*uint256.NewInt(100)),
-			Data:                nil,
-			AccessList:          nil,
-			MaxFeePerDataGas:    view.Uint256View(*uint256.NewInt(dataGasFee)),
-			BlobVersionedHashes: hashes,
-		},
+	if returnedTx.Gas() != tx.Gas() {
+		return fmt.Errorf("gas mismatch: %d != %d", returnedTx.Gas(), tx.Gas())
 	}
-	sbtx.Message.ChainID.SetFromBig(globals.ChainID)
+	if returnedTx.GasPrice().Cmp(tx.GasPrice()) != 0 {
+		return fmt.Errorf("gas price mismatch: %d != %d", returnedTx.GasPrice(), tx.GasPrice())
+	}
+	if returnedTx.Value().Cmp(tx.Value()) != 0 {
+		return fmt.Errorf("value mismatch: %d != %d", returnedTx.Value(), tx.Value())
+	}
+	if returnedTx.To() != nil && tx.To() != nil && returnedTx.To().Hex() != tx.To().Hex() {
+		return fmt.Errorf("to mismatch: %s != %s", returnedTx.To().Hex(), tx.To().Hex())
+	}
+	if returnedTx.Data() != nil && tx.Data() != nil && !bytes.Equal(returnedTx.Data(), tx.Data()) {
+		return fmt.Errorf("data mismatch: %s != %s", hex.EncodeToString(returnedTx.Data()), hex.EncodeToString(tx.Data()))
+	}
+	if returnedTx.AccessList() != nil && tx.AccessList() != nil && !reflect.DeepEqual(returnedTx.AccessList(), tx.AccessList()) {
+		return fmt.Errorf("access list mismatch: %v != %v", returnedTx.AccessList(), tx.AccessList())
+	}
+	if returnedTx.ChainId().Cmp(tx.ChainId()) != 0 {
+		return fmt.Errorf("chain id mismatch: %d != %d", returnedTx.ChainId(), tx.ChainId())
+	}
+	if returnedTx.DataGas().Cmp(tx.DataGas()) != 0 {
+		return fmt.Errorf("data gas mismatch: %d != %d", returnedTx.DataGas(), tx.DataGas())
+	}
+	if returnedTx.GasFeeCapCmp(tx) != 0 {
+		return fmt.Errorf("max fee per gas mismatch: %d != %d", returnedTx.GasFeeCap(), tx.GasFeeCap())
+	}
+	if returnedTx.GasTipCapCmp(tx) != 0 {
+		return fmt.Errorf("max priority fee per gas mismatch: %d != %d", returnedTx.GasTipCap(), tx.GasTipCap())
+	}
+	if returnedTx.MaxFeePerDataGas().Cmp(tx.MaxFeePerDataGas()) != 0 {
+		return fmt.Errorf("max fee per data gas mismatch: %d != %d", returnedTx.MaxFeePerDataGas(), tx.MaxFeePerDataGas())
+	}
+	if returnedTx.DataHashes() != nil && tx.DataHashes() != nil && !reflect.DeepEqual(returnedTx.DataHashes(), tx.DataHashes()) {
+		return fmt.Errorf("blob versioned hashes mismatch: %v != %v", returnedTx.DataHashes(), tx.DataHashes())
+	}
+	if returnedTx.Type() != tx.Type() {
+		return fmt.Errorf("type mismatch: %d != %d", returnedTx.Type(), tx.Type())
+	}
 
-	if key == nil {
-		key = globals.VaultKey
-	}
-
-	tx, err := types.SignNewTx(key, types.NewDankSigner(globals.ChainID), sbtx, types.WithTxWrapData(blobData))
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
-	defer cancel()
-	return eth.SendTransaction(ctx, tx)
+	return nil
 }
 
 // Base test case execution procedure for blobs tests.
@@ -215,7 +301,50 @@ func (bs *BlobsBaseSpec) Execute(t *test.Env) {
 
 	t.CLMock.WaitForTTD()
 	addr := common.BigToAddress(DATAHASH_START_ADDRESS)
-	SendBlobTransaction(t.TestContext, t.Eth, &addr, 0, 100000, 1, 1, 1, nil)
 
-	t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{})
+	// Create the internal test blob transaction pool
+	testBlobTxPool := new(TestBlobTxPool)
+
+	for payloadId, testBlobBlock := range bs.TestBlobPayloads {
+		t.Logf("INFO: Preparing blob payload %d", payloadId+1)
+
+		//  Send the blob transactions
+		for bTx := uint64(0); bTx < testBlobBlock.BlobTransactionSendCount; bTx++ {
+			// Send the blob transaction
+			blobTx, err := helper.SendNextTransaction(t.TestContext, t.Engine,
+				&helper.BlobTransactionCreator{
+					To:         &addr,
+					GasLimit:   100000,
+					DataGasFee: testBlobBlock.BlobTransactionMaxDataGasCost,
+				},
+			)
+			if err != nil {
+				t.Fatalf("FAIL: Error sending blob transaction: %v", err)
+			}
+			VerifyTransactionFromNode(t.TestContext, t.Engine, blobTx)
+			testBlobTxPool.AddBlobTransaction(blobTx)
+			t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
+		}
+
+		// Produce the payload
+		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
+			OnGetPayload: func() {
+				// Get the blobs bundle from the node too
+				ctx, cancel := context.WithTimeout(t.TestContext, 10*time.Second)
+				defer cancel()
+
+				blobBundle, err := t.Engine.GetBlobsBundleV1(ctx, t.CLMock.NextPayloadID)
+				if err != nil {
+					t.Fatalf("FAIL: Error getting blobs bundle: %v", err)
+				}
+
+				payload := &t.CLMock.LatestPayloadBuilt
+
+				if err := testBlobTxPool.VerifyBlobBundle(payload, blobBundle, int(testBlobBlock.ExpectedIncludedBlobCount)); err != nil {
+					t.Fatalf("FAIL: Error verifying blob bundle: %v", err)
+				}
+			},
+		})
+	}
+
 }
