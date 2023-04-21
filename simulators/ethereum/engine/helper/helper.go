@@ -3,6 +3,7 @@ package helper
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"strings"
 	"sync"
 	"time"
@@ -19,11 +20,13 @@ import (
 	"os"
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/holiman/uint256"
 	"github.com/protolambda/ztyp/view"
 
+	gokzg4844 "github.com/crate-crypto/go-kzg-4844"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -31,6 +34,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/hive/hivesim"
 )
+
+var kzg4844Context *gokzg4844.Context
 
 // From ethereum/rpc:
 
@@ -484,14 +489,96 @@ type BlobTransactionCreator struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-func BlobDataGenerator(blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
+func GetKZGContext() (*gokzg4844.Context, error) {
+	if kzg4844Context == nil {
+		var err error
+		kzg4844Context, err = gokzg4844.NewContext4096Insecure1337()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return kzg4844Context, nil
+}
+
+func DeterministicBlobFiller(blobId uint64, blob *types.Blob) error {
+	if blob == nil {
+		return errors.New("nil blob")
+	}
+	if blobId == 0 {
+		// Blob zero is empty blob, so leave as is
+		return nil
+	}
+	// Fill the blob with deterministic data
+	blobIdBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(blobIdBytes, blobId)
+
+	currentHashed := sha256.Sum256(blobIdBytes)
+
+	// Fill the first 32 bytes with the hash of the blobId
+	copy(blob[:32], currentHashed[:])
+
+	// Fill the rest of the blob with the hash of the previous hash
+	for i := 32; i < params.FieldElementsPerBlob*32; i += 32 {
+		currentHashed = sha256.Sum256(currentHashed[:])
+		copy(blob[i:i+32], currentHashed[:])
+	}
+
+	// Check that no 32 bytes chunks are greater than the BLS modulus
+	for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
+		for i := 0; i < 32; i++ {
+			blobByteIdx := chunkIdx*32 + 32 - i - 1
+			if blob[blobByteIdx] < gokzg4844.BlsModulus[i] {
+				// go to next chunk
+				break
+			} else if blob[blobByteIdx] >= gokzg4844.BlsModulus[i] {
+				if gokzg4844.BlsModulus[i] > 0 {
+					// This chunk is greater than the modulus, and we can reduce it in this byte position
+					blob[blobByteIdx] = gokzg4844.BlsModulus[i] - 1
+					// go to next chunk
+					break
+				} else {
+					// This chunk is greater than the modulus, but we can't reduce it in this byte position, so we will try in the next byte position
+					blob[blobByteIdx] = gokzg4844.BlsModulus[i]
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func BlobGenerator(blobId uint64) (*types.Blob, *types.KZGCommitment, error) {
+	blob := types.Blob{}
+	if err := DeterministicBlobFiller(blobId, &blob); err != nil {
+		return nil, nil, err
+	}
+	ctx_4844, err := GetKZGContext()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(gokzg4844.Blob(blob))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	typesKzgCommitment := types.KZGCommitment(kzgCommitment)
+
+	return &blob, &typesKzgCommitment, nil
+}
+
+func BlobDataGenerator(startBlobId uint64, blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
 	blobData := types.BlobTxWrapData{
 		Blobs:    make(types.Blobs, blobCount),
 		BlobKzgs: make([]types.KZGCommitment, blobCount),
 	}
 	for i := uint64(0); i < blobCount; i++ {
-		blobData.Blobs[i] = types.Blob{}
-		blobData.BlobKzgs[i] = types.KZGCommitment{0xc0}
+		if blob, kzgCommitment, err := BlobGenerator(startBlobId + i); err != nil {
+			return nil, nil, err
+		} else {
+			blobData.Blobs[i] = *blob
+			blobData.BlobKzgs[i] = *kzgCommitment
+		}
 	}
 
 	var hashes []common.Hash
@@ -508,10 +595,7 @@ func BlobDataGenerator(blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, 
 
 func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
 	// Need tx wrap data that will pass blob verification
-	if tc.BlobId != 0 {
-		return nil, fmt.Errorf("blob id greater than zero not yet supported")
-	}
-	hashes, blobData, err := BlobDataGenerator(tc.BlobCount)
+	hashes, blobData, err := BlobDataGenerator(tc.BlobId, tc.BlobCount)
 	if err != nil {
 		return nil, err
 	}

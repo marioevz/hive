@@ -31,9 +31,7 @@ var (
 	DATAHASH_ADDRESS_COUNT = 1000
 
 	TARGET_BLOBS_PER_BLOCK = uint64(2)
-	// TODO: Enable 4 blobs when geth is updated
-	// MAX_BLOBS_PER_BLOCK    = uint64(4)
-	MAX_BLOBS_PER_BLOCK = uint64(3)
+	MAX_BLOBS_PER_BLOCK    = uint64(4)
 
 	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = uint64(12)
 )
@@ -55,7 +53,7 @@ var Tests = []test.SpecInterface{
 		// We fork on genesis
 		BlobsForkHeight: 0,
 
-		TestSteps: []BlobTestStep{
+		BlobTestSequence: BlobTestSequence{
 			// First, we send a couple of blob transactions on genesis,
 			// with enough data gas cost to make sure they are included in the first block.
 			SendBlobTransactions{
@@ -106,7 +104,7 @@ type BlobsBaseSpec struct {
 	test.Spec
 	TimeIncrements  uint64 // Timestamp increments per block throughout the test
 	BlobsForkHeight uint64 // Withdrawals activation fork height
-	TestSteps       []BlobTestStep
+	BlobTestSequence
 }
 
 // Generates the fork config, including sharding fork timestamp.
@@ -330,7 +328,7 @@ func (bs *BlobsBaseSpec) Execute(t *test.Env) {
 		TestBlobTxPool: new(TestBlobTxPool),
 	}
 
-	for stepId, step := range bs.TestSteps {
+	for stepId, step := range bs.BlobTestSequence {
 		t.Logf("INFO: Executing step %d: %s", stepId+1, step.Description())
 		if err := step.Execute(blobTestCtx); err != nil {
 			t.Fatalf("FAIL: Error executing step %d: %v", stepId+1, err)

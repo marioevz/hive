@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -24,6 +25,34 @@ type BlobTestStep interface {
 	// Executes the step
 	Execute(testCtx *BlobTestContext) error
 	Description() string
+}
+
+type BlobTestSequence []BlobTestStep
+
+// A step that runs two or more steps in parallel
+type ParallelSteps struct {
+	Steps []BlobTestStep
+}
+
+func (step ParallelSteps) Execute(t *BlobTestContext) error {
+	// Run the steps in parallel
+	wg := sync.WaitGroup{}
+	errs := make(chan error, len(step.Steps))
+	for _, s := range step.Steps {
+		wg.Add(1)
+		go func(s BlobTestStep) {
+			defer wg.Done()
+			if err := s.Execute(t); err != nil {
+				errs <- err
+			}
+		}(s)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		return err
+	}
+	return nil
 }
 
 // A step that sends a new payload to the client
@@ -106,6 +135,7 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 				GasTip:     step.BlobTransactionGasTipCap,
 				DataGasFee: step.BlobTransactionMaxDataGasCost,
 				BlobCount:  blobCountPerTx,
+				BlobId:     t.CurrentBlobID,
 			},
 		)
 		if err != nil {
@@ -114,6 +144,7 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 		VerifyTransactionFromNode(t.TestContext, t.Engine, blobTx)
 		t.AddBlobTransaction(blobTx)
 		t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
+		t.CurrentBlobID += blobCountPerTx
 	}
 	return nil
 }
