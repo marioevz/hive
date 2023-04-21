@@ -478,9 +478,32 @@ type BlobTransactionCreator struct {
 	GasTip     *big.Int
 	DataGasFee *big.Int
 	BlobId     uint64
+	BlobCount  uint64
 	Value      *big.Int
 	Data       []byte
 	PrivateKey *ecdsa.PrivateKey
+}
+
+func BlobDataGenerator(blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
+	blobData := types.BlobTxWrapData{
+		Blobs:    make(types.Blobs, blobCount),
+		BlobKzgs: make([]types.KZGCommitment, blobCount),
+	}
+	for i := uint64(0); i < blobCount; i++ {
+		blobData.Blobs[i] = types.Blob{}
+		blobData.BlobKzgs[i] = types.KZGCommitment{0xc0}
+	}
+
+	var hashes []common.Hash
+	for i := 0; i < len(blobData.BlobKzgs); i++ {
+		hashes = append(hashes, blobData.BlobKzgs[i].ComputeVersionedHash())
+	}
+	_, _, proofs, err := blobData.Blobs.ComputeCommitmentsAndProofs()
+	if err != nil {
+		return nil, nil, err
+	}
+	blobData.Proofs = proofs
+	return hashes, &blobData, nil
 }
 
 func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
@@ -488,23 +511,10 @@ func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transact
 	if tc.BlobId != 0 {
 		return nil, fmt.Errorf("blob id greater than zero not yet supported")
 	}
-	blobData := &types.BlobTxWrapData{
-		BlobKzgs: []types.KZGCommitment{
-			{0xc0},
-		},
-		Blobs: []types.Blob{
-			{},
-		},
-	}
-	var hashes []common.Hash
-	for i := 0; i < len(blobData.BlobKzgs); i++ {
-		hashes = append(hashes, blobData.BlobKzgs[i].ComputeVersionedHash())
-	}
-	_, _, proofs, err := blobData.Blobs.ComputeCommitmentsAndProofs()
+	hashes, blobData, err := BlobDataGenerator(tc.BlobCount)
 	if err != nil {
 		return nil, err
 	}
-	blobData.Proofs = proofs
 
 	var address *types.AddressSSZ
 	if tc.To != nil {

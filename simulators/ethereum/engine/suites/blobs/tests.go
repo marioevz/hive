@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,7 +16,6 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
-	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 )
 
@@ -32,46 +30,72 @@ var (
 	DATAHASH_START_ADDRESS = big.NewInt(0x100)
 	DATAHASH_ADDRESS_COUNT = 1000
 
-	MAX_BLOBS_PER_BLOCK = 4
+	TARGET_BLOBS_PER_BLOCK = uint64(2)
+	// TODO: Enable 4 blobs when geth is updated
+	// MAX_BLOBS_PER_BLOCK    = uint64(4)
+	MAX_BLOBS_PER_BLOCK = uint64(3)
+
+	DATA_GAS_COST_INCREMENT_EXCEED_BLOBS = uint64(12)
 )
 
 // Execution specification reference:
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
 
-// List of all withdrawals tests
+// List of all blob tests
 var Tests = []test.SpecInterface{
 	&BlobsBaseSpec{
+
 		Spec: test.Spec{
 			Name: "Blob Transactions On Genesis",
 			About: `
-			Tests the sharding fork on genesis (e.g. on a
-			testnet).
+			Tests the sharding fork on genesis.
 			`,
 		},
+
+		// We fork on genesis
 		BlobsForkHeight: 0,
-		TestBlobPayloads: []TestBlobPayload{
-			{
-				// We send a blob transaction on genesis, and this same
-				// transaction should be included in the first block.
-				BlobTransactionSendCount:      2,
+
+		TestSteps: []BlobTestStep{
+			// First, we send a couple of blob transactions on genesis,
+			// with enough data gas cost to make sure they are included in the first block.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      TARGET_BLOBS_PER_BLOCK,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
-				NormalTransactionSendCount:    0,
-				ExpectedIncludedBlobCount:     2,
+			},
+
+			// We create the first payload, and verify that the blob transactions
+			// are included in the payload.
+			// We also verify that the blob transactions are included in the blobs bundle.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 2,
+			},
+
+			// Try to increase the data gas cost of the blob transactions
+			// by maxing out the number of blobs for the next payloads.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      DATA_GAS_COST_INCREMENT_EXCEED_BLOBS/(MAX_BLOBS_PER_BLOCK-TARGET_BLOBS_PER_BLOCK) + 1,
+				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+
+			// Next payloads will have 4 data blobs each
+			NewPayloads{
+				PayloadCount:              DATA_GAS_COST_INCREMENT_EXCEED_BLOBS / (MAX_BLOBS_PER_BLOCK - TARGET_BLOBS_PER_BLOCK),
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+
+			// But there will be an empty payload, since the data gas cost increased
+			// and the last blob transaction was not included.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+			},
+
+			// But it will be included in the next payload
+			NewPayloads{
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
 			},
 		},
 	},
-}
-
-// Test Blob Payload Descriptor
-type TestBlobPayload struct {
-	// Number of blob transactions to send before this block's GetPayload request
-	BlobTransactionSendCount uint64
-	// Max Data Gas Cost for every blob transaction
-	BlobTransactionMaxDataGasCost *big.Int
-	// Number of normal transactions (type 0-2) to send before this block's GetPayload request
-	NormalTransactionSendCount uint64
-	// Number of blob transactions that are expected to be included in the payload
-	ExpectedIncludedBlobCount uint64
 }
 
 // Blobs base spec
@@ -80,9 +104,9 @@ type TestBlobPayload struct {
 // payloads to produce during the test.
 type BlobsBaseSpec struct {
 	test.Spec
-	TimeIncrements   uint64 // Timestamp increments per block throughout the test
-	BlobsForkHeight  uint64 // Withdrawals activation fork height
-	TestBlobPayloads []TestBlobPayload
+	TimeIncrements  uint64 // Timestamp increments per block throughout the test
+	BlobsForkHeight uint64 // Withdrawals activation fork height
+	TestSteps       []BlobTestStep
 }
 
 // Generates the fork config, including sharding fork timestamp.
@@ -300,51 +324,17 @@ func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx *types.Tr
 func (bs *BlobsBaseSpec) Execute(t *test.Env) {
 
 	t.CLMock.WaitForTTD()
-	addr := common.BigToAddress(DATAHASH_START_ADDRESS)
 
-	// Create the internal test blob transaction pool
-	testBlobTxPool := new(TestBlobTxPool)
+	blobTestCtx := &BlobTestContext{
+		Env:            t,
+		TestBlobTxPool: new(TestBlobTxPool),
+	}
 
-	for payloadId, testBlobBlock := range bs.TestBlobPayloads {
-		t.Logf("INFO: Preparing blob payload %d", payloadId+1)
-
-		//  Send the blob transactions
-		for bTx := uint64(0); bTx < testBlobBlock.BlobTransactionSendCount; bTx++ {
-			// Send the blob transaction
-			blobTx, err := helper.SendNextTransaction(t.TestContext, t.Engine,
-				&helper.BlobTransactionCreator{
-					To:         &addr,
-					GasLimit:   100000,
-					DataGasFee: testBlobBlock.BlobTransactionMaxDataGasCost,
-				},
-			)
-			if err != nil {
-				t.Fatalf("FAIL: Error sending blob transaction: %v", err)
-			}
-			VerifyTransactionFromNode(t.TestContext, t.Engine, blobTx)
-			testBlobTxPool.AddBlobTransaction(blobTx)
-			t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
+	for stepId, step := range bs.TestSteps {
+		t.Logf("INFO: Executing step %d: %s", stepId+1, step.Description())
+		if err := step.Execute(blobTestCtx); err != nil {
+			t.Fatalf("FAIL: Error executing step %d: %v", stepId+1, err)
 		}
-
-		// Produce the payload
-		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
-			OnGetPayload: func() {
-				// Get the blobs bundle from the node too
-				ctx, cancel := context.WithTimeout(t.TestContext, 10*time.Second)
-				defer cancel()
-
-				blobBundle, err := t.Engine.GetBlobsBundleV1(ctx, t.CLMock.NextPayloadID)
-				if err != nil {
-					t.Fatalf("FAIL: Error getting blobs bundle: %v", err)
-				}
-
-				payload := &t.CLMock.LatestPayloadBuilt
-
-				if err := testBlobTxPool.VerifyBlobBundle(payload, blobBundle, int(testBlobBlock.ExpectedIncludedBlobCount)); err != nil {
-					t.Fatalf("FAIL: Error verifying blob bundle: %v", err)
-				}
-			},
-		})
 	}
 
 }
