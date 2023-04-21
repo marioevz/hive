@@ -1,7 +1,7 @@
 ## By default, the geth is pulled from Docker Hub.
 
-ARG branch=latest
-FROM ethereum/client-go:$branch as builder
+# ARG branch=latest
+# FROM ethereum/client-go:$branch as builder
 
 ## ----
 ## Uncomment the steps below (and comment out the steps above!) to build go-ethereum
@@ -14,6 +14,32 @@ FROM ethereum/client-go:$branch as builder
 # RUN apk add --update bash curl jq git make
 # RUN make geth
 # RUN mv ./build/bin/geth /usr/local/bin/geth
+
+## ----
+
+## ----
+## Uncomment the steps below (and comment out the steps above!) to build go-ethereum
+## from a git branch.
+
+FROM alpine:latest as builder
+# ARG branch=master
+# ARG repo=ethereum
+ARG branch=eip-4844
+ARG repo=mdehoog
+RUN \
+  apk add --update bash curl jq go git make gcc musl-dev              \
+        ca-certificates linux-headers                           && \
+  git clone --depth 1 --branch $branch  https://github.com/$repo/go-ethereum && \
+  (cd go-ethereum && make geth)                               && \
+  (cd go-ethereum                                             && \
+  echo "{}"                                                      \
+  | jq ".+ {\"repo\":\"$(git config --get remote.origin.url)\"}" \
+  | jq ".+ {\"branch\":\"$(git rev-parse --abbrev-ref HEAD)\"}"  \
+  | jq ".+ {\"commit\":\"$(git rev-parse HEAD)\"}"               \
+  > /version.json)                                            && \
+  cp go-ethereum/build/bin/geth /usr/local/bin/geth           && \
+  apk del go git make gcc musl-dev linux-headers              && \
+  rm -rf /go-ethereum && rm -rf /var/cache/apk/*
 
 ## ----
 
