@@ -78,8 +78,8 @@ func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.E
 	if len(blobBundle.Blobs) != int(step.ExpectedIncludedBlobCount) {
 		return fmt.Errorf("expected %d blob, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Blobs))
 	}
-	if len(blobBundle.KZGs) != int(step.ExpectedIncludedBlobCount) {
-		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.KZGs))
+	if len(blobBundle.Commitments) != int(step.ExpectedIncludedBlobCount) {
+		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Commitments))
 	}
 	// Find all blob transactions included in the payload
 	type BlobWrapData struct {
@@ -128,13 +128,17 @@ func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.E
 	}
 
 	for i, blobData := range blobDataInPayload {
-		bundleKzg := blobBundle.KZGs[i]
+		bundleCommitment := blobBundle.Commitments[i]
 		bundleBlob := blobBundle.Blobs[i]
-		if !bytes.Equal(bundleKzg[:], blobData.KZG[:]) {
-			return fmt.Errorf("KZG mismatch at index %d", i)
+		bundleProof := blobBundle.Proofs[i]
+		if !bytes.Equal(bundleCommitment[:], blobData.KZG[:]) {
+			return fmt.Errorf("KZG mismatch at index %d of the bundle", i)
 		}
 		if !bytes.Equal(bundleBlob[:], blobData.Blob[:]) {
-			return fmt.Errorf("blob mismatch at index %d", i)
+			return fmt.Errorf("blob mismatch at index %d of the bundle", i)
+		}
+		if !bytes.Equal(bundleProof[:], blobData.Proof[:]) {
+			return fmt.Errorf("proof mismatch at index %d of the bundle", i)
 		}
 	}
 
