@@ -2,19 +2,9 @@
 package suite_blobs
 
 import (
-	"bytes"
-	"context"
-	"encoding/hex"
-	"fmt"
 	"math/big"
-	"reflect"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/hive/simulators/ethereum/engine/client"
-	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
-	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	"github.com/ethereum/hive/simulators/ethereum/engine/client/hive_rpc"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 )
@@ -98,6 +88,149 @@ var Tests = []test.SpecInterface{
 	&BlobsBaseSpec{
 
 		Spec: test.Spec{
+			Name: "Blob Transaction Ordering, Single Account",
+			About: `
+			Send N blob transactions with MAX_BLOBS_PER_BLOCK-1 blobs each,
+			using account A.
+			Using same account, and an increased nonce from the previously sent
+			transactions, send N blob transactions with 1 blob each.
+			Verify that the payloads are created with the correct ordering:
+			 - The first payloads must include the first N blob transactions.
+			 - The last payloads must include the last single-blob transactions.
+			All transactions have sufficient data gas price to be included any
+			of the payloads.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First send the MAX_BLOBS_PER_BLOCK-1 blob transactions.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK - 1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+			},
+			// Then send the single-blob transactions
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+			},
+
+			// First four payloads have MAX_BLOBS_PER_BLOCK-1 blobs each
+			NewPayloads{
+				PayloadCount:              4,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK - 1,
+			},
+
+			// The rest of the payloads have full blobs
+			NewPayloads{
+				PayloadCount:              2,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Blob Transaction Ordering, Multiple Accounts",
+			About: `
+			Send N blob transactions with MAX_BLOBS_PER_BLOCK-1 blobs each,
+			using account A.
+			Send N blob transactions with 1 blob each from account B.
+			Verify that the payloads are created with the correct ordering:
+			 - All payloads must have full blobs.
+			All transactions have sufficient data gas price to be included any
+			of the payloads.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// First send the MAX_BLOBS_PER_BLOCK-1 blob transactions from
+			// account A.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK - 1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+				AccountIndex:                  0,
+			},
+			// Then send the single-blob transactions from account B
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+				AccountIndex:                  1,
+			},
+
+			// All payloads have full blobs
+			NewPayloads{
+				PayloadCount:              5,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Blob Transaction Ordering, Multiple Clients",
+			About: `
+			Send N blob transactions with MAX_BLOBS_PER_BLOCK-1 blobs each,
+			using account A, to client A.
+			Send N blob transactions with 1 blob each from account B, to client
+			B.
+			Verify that the payloads are created with the correct ordering:
+			 - All payloads must have full blobs.
+			All transactions have sufficient data gas price to be included any
+			of the payloads.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// Start a secondary client to also receive blob transactions
+			LaunchClient{
+				EngineStarter: hive_rpc.HiveRPCEngineStarter{},
+			},
+
+			// First send the MAX_BLOBS_PER_BLOCK-1 blob transactions from
+			// account A, to client A.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           MAX_BLOBS_PER_BLOCK - 1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+				AccountIndex:                  0,
+				ClientIndex:                   0,
+			},
+			// Then send the single-blob transactions from account B, to client
+			// B.
+			SendBlobTransactions{
+				BlobTransactionSendCount:      5,
+				BlobsPerTransaction:           1,
+				BlobTransactionMaxDataGasCost: big.NewInt(100),
+				AccountIndex:                  1,
+				ClientIndex:                   1,
+			},
+
+			// All payloads have full blobs
+			NewPayloads{
+				PayloadCount:              5,
+				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+		},
+	},
+
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
 			Name: "Replace Blob Transactions",
 			About: `
 			Test sending multiple blob transactions with the same nonce, but
@@ -113,24 +246,28 @@ var Tests = []test.SpecInterface{
 			SendBlobTransactions{ // Blob ID 0
 				BlobTransactionSendCount:      1,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionGasFeeCap:      big.NewInt(1e9),
 				BlobTransactionGasTipCap:      big.NewInt(1e9),
 			},
 			SendBlobTransactions{ // Blob ID 1
 				BlobTransactionSendCount:      1,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
-				BlobTransactionGasTipCap:      big.NewInt(1e11),
+				BlobTransactionGasFeeCap:      big.NewInt(1e10),
+				BlobTransactionGasTipCap:      big.NewInt(1e10),
 				ReplaceTransactions:           true,
 			},
 			SendBlobTransactions{ // Blob ID 2
 				BlobTransactionSendCount:      1,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
-				BlobTransactionGasTipCap:      big.NewInt(1e12),
+				BlobTransactionGasFeeCap:      big.NewInt(1e11),
+				BlobTransactionGasTipCap:      big.NewInt(1e11),
 				ReplaceTransactions:           true,
 			},
 			SendBlobTransactions{ // Blob ID 3
 				BlobTransactionSendCount:      1,
 				BlobTransactionMaxDataGasCost: big.NewInt(1),
-				BlobTransactionGasTipCap:      big.NewInt(1e13),
+				BlobTransactionGasFeeCap:      big.NewInt(1e12),
+				BlobTransactionGasTipCap:      big.NewInt(1e12),
 				ReplaceTransactions:           true,
 			},
 
@@ -153,147 +290,6 @@ type BlobsBaseSpec struct {
 	TimeIncrements  uint64 // Timestamp increments per block throughout the test
 	BlobsForkHeight uint64 // Withdrawals activation fork height
 	BlobTestSequence
-}
-
-// Generates the fork config, including sharding fork timestamp.
-func (bs *BlobsBaseSpec) GetForkConfig() globals.ForkConfig {
-	return globals.ForkConfig{
-		ShanghaiTimestamp:     big.NewInt(0),
-		ShardingForkTimestamp: big.NewInt(int64(bs.BlobsForkHeight) * int64(bs.GetBlockTimeIncrements())),
-	}
-}
-
-// Get the per-block timestamp increments configured for this test
-func (bs *BlobsBaseSpec) GetBlockTimeIncrements() uint64 {
-	return 1
-}
-
-// Timestamp delta between genesis and the withdrawals fork
-func (bs *BlobsBaseSpec) GetBlobsGenesisTimeDelta() uint64 {
-	return bs.BlobsForkHeight * bs.GetBlockTimeIncrements()
-}
-
-// Calculates Shanghai fork timestamp given the amount of blocks that need to be
-// produced beforehand.
-func (bs *BlobsBaseSpec) GetBlobsForkTime() uint64 {
-	return uint64(globals.GenesisTimestamp) + bs.GetBlobsGenesisTimeDelta()
-}
-
-// Append the accounts we are going to withdraw to, which should also include
-// bytecode for testing purposes.
-func (bs *BlobsBaseSpec) GetGenesis() *core.Genesis {
-	genesis := bs.Spec.GetGenesis()
-
-	// Remove PoW altogether
-	genesis.Difficulty = common.Big0
-	genesis.Config.TerminalTotalDifficulty = common.Big0
-	genesis.Config.Clique = nil
-	genesis.ExtraData = []byte{}
-
-	// Add accounts that use the DATAHASH opcode
-	datahashCode := []byte{
-		0x5F, // PUSH0
-		0x80, // DUP1
-		0x49, // DATAHASH
-		0x55, // SSTORE
-		0x60, // PUSH1(0x01)
-		0x01,
-		0x80, // DUP1
-		0x49, // DATAHASH
-		0x55, // SSTORE
-		0x60, // PUSH1(0x02)
-		0x02,
-		0x80, // DUP1
-		0x49, // DATAHASH
-		0x55, // SSTORE
-		0x60, // PUSH1(0x03)
-		0x03,
-		0x80, // DUP1
-		0x49, // DATAHASH
-		0x55, // SSTORE
-	}
-
-	for i := 0; i < DATAHASH_ADDRESS_COUNT; i++ {
-		address := big.NewInt(0).Add(DATAHASH_START_ADDRESS, big.NewInt(int64(i)))
-		genesis.Alloc[common.BigToAddress(address)] = core.GenesisAccount{
-			Code:    datahashCode,
-			Balance: common.Big0,
-		}
-	}
-
-	return genesis
-}
-
-// Changes the CL Mocker default time increments of 1 to the value specified
-// in the test spec.
-func (bs *BlobsBaseSpec) ConfigureCLMock(cl *clmock.CLMocker) {
-	cl.BlockTimestampIncrement = big.NewInt(int64(bs.GetBlockTimeIncrements()))
-}
-
-type TestBlobTxPool struct {
-	Transactions map[common.Hash]*types.Transaction
-}
-
-func (pool *TestBlobTxPool) AddBlobTransaction(tx *types.Transaction) {
-	if pool.Transactions == nil {
-		pool.Transactions = make(map[common.Hash]*types.Transaction)
-	}
-	pool.Transactions[tx.Hash()] = tx
-}
-
-// Test two different transactions with the same blob, and check the blob bundle.
-
-func VerifyTransactionFromNode(ctx context.Context, eth client.Eth, tx *types.Transaction) error {
-	returnedTx, _, err := eth.TransactionByHash(ctx, tx.Hash())
-	if err != nil {
-		return err
-	}
-
-	// Verify that the tx fields are all the same
-	if returnedTx.Nonce() != tx.Nonce() {
-		return fmt.Errorf("nonce mismatch: %d != %d", returnedTx.Nonce(), tx.Nonce())
-	}
-	if returnedTx.Gas() != tx.Gas() {
-		return fmt.Errorf("gas mismatch: %d != %d", returnedTx.Gas(), tx.Gas())
-	}
-	if returnedTx.GasPrice().Cmp(tx.GasPrice()) != 0 {
-		return fmt.Errorf("gas price mismatch: %d != %d", returnedTx.GasPrice(), tx.GasPrice())
-	}
-	if returnedTx.Value().Cmp(tx.Value()) != 0 {
-		return fmt.Errorf("value mismatch: %d != %d", returnedTx.Value(), tx.Value())
-	}
-	if returnedTx.To() != nil && tx.To() != nil && returnedTx.To().Hex() != tx.To().Hex() {
-		return fmt.Errorf("to mismatch: %s != %s", returnedTx.To().Hex(), tx.To().Hex())
-	}
-	if returnedTx.Data() != nil && tx.Data() != nil && !bytes.Equal(returnedTx.Data(), tx.Data()) {
-		return fmt.Errorf("data mismatch: %s != %s", hex.EncodeToString(returnedTx.Data()), hex.EncodeToString(tx.Data()))
-	}
-	if returnedTx.AccessList() != nil && tx.AccessList() != nil && !reflect.DeepEqual(returnedTx.AccessList(), tx.AccessList()) {
-		return fmt.Errorf("access list mismatch: %v != %v", returnedTx.AccessList(), tx.AccessList())
-	}
-	if returnedTx.ChainId().Cmp(tx.ChainId()) != 0 {
-		return fmt.Errorf("chain id mismatch: %d != %d", returnedTx.ChainId(), tx.ChainId())
-	}
-	if returnedTx.DataGas().Cmp(tx.DataGas()) != 0 {
-		return fmt.Errorf("data gas mismatch: %d != %d", returnedTx.DataGas(), tx.DataGas())
-	}
-	if returnedTx.GasFeeCapCmp(tx) != 0 {
-		return fmt.Errorf("max fee per gas mismatch: %d != %d", returnedTx.GasFeeCap(), tx.GasFeeCap())
-	}
-	if returnedTx.GasTipCapCmp(tx) != 0 {
-		return fmt.Errorf("max priority fee per gas mismatch: %d != %d", returnedTx.GasTipCap(), tx.GasTipCap())
-	}
-	if returnedTx.MaxFeePerDataGas().Cmp(tx.MaxFeePerDataGas()) != 0 {
-		return fmt.Errorf("max fee per data gas mismatch: %d != %d", returnedTx.MaxFeePerDataGas(), tx.MaxFeePerDataGas())
-	}
-	if returnedTx.DataHashes() != nil && tx.DataHashes() != nil && !reflect.DeepEqual(returnedTx.DataHashes(), tx.DataHashes()) {
-		return fmt.Errorf("blob versioned hashes mismatch: %v != %v", returnedTx.DataHashes(), tx.DataHashes())
-	}
-	if returnedTx.Type() != tx.Type() {
-		return fmt.Errorf("type mismatch: %d != %d", returnedTx.Type(), tx.Type())
-	}
-
-	return nil
 }
 
 // Base test case execution procedure for blobs tests.

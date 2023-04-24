@@ -1,4 +1,3 @@
-// # Test suite for blob tests
 package suite_blobs
 
 import (
@@ -10,7 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
+	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 )
@@ -54,6 +55,38 @@ func (step ParallelSteps) Execute(t *BlobTestContext) error {
 		return err
 	}
 	return nil
+}
+
+// A step that launches a new client
+type LaunchClient struct {
+	client.EngineStarter
+	SkipConnectingToBootnode bool
+	SkipAddingToCLMock       bool
+}
+
+func (step LaunchClient) Execute(t *BlobTestContext) error {
+	// Launch a new client
+	var (
+		client client.EngineClient
+		err    error
+	)
+	if !step.SkipConnectingToBootnode {
+		client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles, t.Engines[0])
+	} else {
+		client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles)
+	}
+	if err != nil {
+		return err
+	}
+	t.Engines = append(t.Engines, client)
+	if !step.SkipAddingToCLMock {
+		t.CLMock.AddEngineClient(client)
+	}
+	return nil
+}
+
+func (step LaunchClient) Description() string {
+	return "Launch new engine client"
 }
 
 // A step that sends a new payload to the client
@@ -199,10 +232,16 @@ type SendBlobTransactions struct {
 	BlobsPerTransaction uint64
 	// Max Data Gas Cost for every blob transaction
 	BlobTransactionMaxDataGasCost *big.Int
+	// Gas Fee Cap for every blob transaction
+	BlobTransactionGasFeeCap *big.Int
 	// Gas Tip Cap for every blob transaction
 	BlobTransactionGasTipCap *big.Int
 	// Replace transactions
 	ReplaceTransactions bool
+	// Account index to send the blob transactions from
+	AccountIndex uint64
+	// Client index to send the blob transactions to
+	ClientIndex uint64
 }
 
 func (step SendBlobTransactions) GetBlobsPerTransaction() uint64 {
@@ -217,6 +256,11 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 	// Send a blob transaction
 	addr := common.BigToAddress(DATAHASH_START_ADDRESS)
 	blobCountPerTx := step.GetBlobsPerTransaction()
+	var engine client.EngineClient
+	if step.ClientIndex >= uint64(len(t.Engines)) {
+		return fmt.Errorf("invalid client index %d", step.ClientIndex)
+	}
+	engine = t.Engines[step.ClientIndex]
 	//  Send the blob transactions
 	for bTx := uint64(0); bTx < step.BlobTransactionSendCount; bTx++ {
 		blobTxCreator := &helper.BlobTransactionCreator{
@@ -227,23 +271,30 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 			BlobCount:  blobCountPerTx,
 			BlobID:     t.CurrentBlobID,
 		}
+		if step.AccountIndex != 0 {
+			if step.AccountIndex >= uint64(len(globals.TestAccounts)) {
+				return fmt.Errorf("invalid account index %d", step.AccountIndex)
+			}
+			key := globals.TestAccounts[step.AccountIndex].GetKey()
+			blobTxCreator.PrivateKey = key
+		}
 		var (
 			blobTx *types.Transaction
 			err    error
 		)
 		if step.ReplaceTransactions {
-			blobTx, err = helper.ReplaceLastTransaction(t.TestContext, t.Engine,
+			blobTx, err = helper.ReplaceLastTransaction(t.TestContext, engine,
 				blobTxCreator,
 			)
 		} else {
-			blobTx, err = helper.SendNextTransaction(t.TestContext, t.Engine,
+			blobTx, err = helper.SendNextTransaction(t.TestContext, engine,
 				blobTxCreator,
 			)
 		}
 		if err != nil {
 			t.Fatalf("FAIL: Error sending blob transaction: %v", err)
 		}
-		VerifyTransactionFromNode(t.TestContext, t.Engine, blobTx)
+		VerifyTransactionFromNode(t.TestContext, engine, blobTx)
 		t.AddBlobTransaction(blobTx)
 		t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
 		t.CurrentBlobID += helper.BlobID(blobCountPerTx)

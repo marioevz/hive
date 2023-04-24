@@ -34,6 +34,7 @@ type Env struct {
 	Eth        client.Eth
 	TestEngine *TestEngineClient
 	HiveEngine *hive_rpc.HiveRPCEngineClient
+	Engines    []client.EngineClient
 
 	// Consensus Layer Mocker Instance
 	CLMock *clmock.CLMocker
@@ -81,6 +82,7 @@ func Run(testSpec SpecInterface, ttd *big.Int, timeout time.Duration, t *hivesim
 		TestName:            testSpec.GetName(),
 		Client:              c,
 		Engine:              ec,
+		Engines:             make([]client.EngineClient, 0),
 		Eth:                 ec,
 		HiveEngine:          ec,
 		CLMock:              clMocker,
@@ -89,6 +91,7 @@ func Run(testSpec SpecInterface, ttd *big.Int, timeout time.Duration, t *hivesim
 		ClientFiles:         cFiles,
 		TestTransactionType: testSpec.GetTestTransactionType(),
 	}
+	env.Engines = append(env.Engines, ec)
 
 	// Before running the test, make sure Eth and Engine ports are open for the client
 	if err := hive_rpc.CheckEthEngineLive(c); err != nil {
