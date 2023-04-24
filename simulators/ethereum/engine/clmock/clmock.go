@@ -88,6 +88,7 @@ type CLMocker struct {
 	LatestHeader            *types.Header
 	LatestPayloadBuilt      api.ExecutableData
 	LatestBlockValue        *big.Int
+	LatestBlobBundle        *api.BlobsBundle
 	LatestPayloadAttributes api.PayloadAttributes
 	LatestExecutedPayload   api.ExecutableData
 	LatestForkchoice        api.ForkchoiceStateV1
@@ -369,13 +370,14 @@ func (cl *CLMocker) GetNextPayload() {
 	ctx, cancel := context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 	defer cancel()
 	if isSharding(cl.LatestPayloadAttributes.Timestamp, cl.ShardingForkTimestamp) {
-		cl.LatestPayloadBuilt, cl.LatestBlockValue, err = cl.NextBlockProducer.GetPayloadV3(ctx, cl.NextPayloadID)
+		cl.LatestPayloadBuilt, cl.LatestBlockValue, cl.LatestBlobBundle, err = cl.NextBlockProducer.GetPayloadV3(ctx, cl.NextPayloadID)
 	} else if isShanghai(cl.LatestPayloadAttributes.Timestamp, cl.ShanghaiTimestamp) {
 		cl.LatestPayloadBuilt, cl.LatestBlockValue, err = cl.NextBlockProducer.GetPayloadV2(ctx, cl.NextPayloadID)
-
+		cl.LatestBlobBundle = nil
 	} else {
 		cl.LatestPayloadBuilt, err = cl.NextBlockProducer.GetPayloadV1(ctx, cl.NextPayloadID)
 		cl.LatestBlockValue = nil
+		cl.LatestBlobBundle = nil
 	}
 	if err != nil {
 		cl.Fatalf("CLMocker: Could not getPayload (%v, %v): %v", cl.NextBlockProducer.ID(), cl.NextPayloadID, err)

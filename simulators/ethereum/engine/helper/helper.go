@@ -475,6 +475,8 @@ func (tc *BigInitcodeTransactionCreator) MakeTransaction(nonce uint64) (*types.T
 	return tc.BaseTransactionCreator.MakeTransaction(nonce)
 }
 
+type BlobID uint64
+
 // Blob transaction creator
 type BlobTransactionCreator struct {
 	To         *common.Address
@@ -482,7 +484,7 @@ type BlobTransactionCreator struct {
 	GasFee     *big.Int
 	GasTip     *big.Int
 	DataGasFee *big.Int
-	BlobId     uint64
+	BlobID     BlobID
 	BlobCount  uint64
 	Value      *big.Int
 	Data       []byte
@@ -500,7 +502,62 @@ func GetKZGContext() (*gokzg4844.Context, error) {
 	return kzg4844Context, nil
 }
 
-func DeterministicBlobFiller(blobId uint64, blob *types.Blob) error {
+func (blobId BlobID) VerifyBlob(blob *types.Blob) (bool, error) {
+	if blob == nil {
+		return false, errors.New("nil blob")
+	}
+	if blobId == 0 {
+		// Blob zero is empty blob
+		emptyFieldElem := [32]byte{}
+		for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
+			if !bytes.Equal(blob[chunkIdx*32:(chunkIdx+1)*32], emptyFieldElem[:]) {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+
+	// Check the blob against the deterministic data
+	blobIdBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(blobIdBytes, uint64(blobId))
+
+	// First 32 bytes are the hash of the blob ID
+	currentHashed := sha256.Sum256(blobIdBytes)
+
+	for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
+		var expectedFieldElem [32]byte
+		copy(expectedFieldElem[:], currentHashed[:])
+
+		// Check that no 32 bytes chunks are greater than the BLS modulus
+		for i := 0; i < 32; i++ {
+			blobByteIdx := 32 - i - 1
+			if expectedFieldElem[blobByteIdx] < gokzg4844.BlsModulus[i] {
+				// done with this field element
+				break
+			} else if expectedFieldElem[blobByteIdx] >= gokzg4844.BlsModulus[i] {
+				if gokzg4844.BlsModulus[i] > 0 {
+					// This chunk is greater than the modulus, and we can reduce it in this byte position
+					expectedFieldElem[blobByteIdx] = gokzg4844.BlsModulus[i] - 1
+					// done with this field element
+					break
+				} else {
+					// This chunk is greater than the modulus, but we can't reduce it in this byte position, so we will try in the next byte position
+					expectedFieldElem[blobByteIdx] = gokzg4844.BlsModulus[i]
+				}
+			}
+		}
+
+		if !bytes.Equal(blob[chunkIdx*32:(chunkIdx+1)*32], expectedFieldElem[:]) {
+			return false, nil
+		}
+
+		// Hash the current hash
+		currentHashed = sha256.Sum256(currentHashed[:])
+	}
+	return true, nil
+}
+
+func (blobId BlobID) FillBlob(blob *types.Blob) error {
 	if blob == nil {
 		return errors.New("nil blob")
 	}
@@ -510,23 +567,17 @@ func DeterministicBlobFiller(blobId uint64, blob *types.Blob) error {
 	}
 	// Fill the blob with deterministic data
 	blobIdBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(blobIdBytes, blobId)
+	binary.BigEndian.PutUint64(blobIdBytes, uint64(blobId))
 
+	// First 32 bytes are the hash of the blob ID
 	currentHashed := sha256.Sum256(blobIdBytes)
 
-	// Fill the first 32 bytes with the hash of the blobId
-	copy(blob[:32], currentHashed[:])
-
-	// Fill the rest of the blob with the hash of the previous hash
-	for i := 32; i < params.FieldElementsPerBlob*32; i += 32 {
-		currentHashed = sha256.Sum256(currentHashed[:])
-		copy(blob[i:i+32], currentHashed[:])
-	}
-
-	// Check that no 32 bytes chunks are greater than the BLS modulus
 	for chunkIdx := 0; chunkIdx < params.FieldElementsPerBlob; chunkIdx++ {
+		copy(blob[chunkIdx*32:(chunkIdx+1)*32], currentHashed[:])
+
+		// Check that no 32 bytes chunks are greater than the BLS modulus
 		for i := 0; i < 32; i++ {
-			blobByteIdx := chunkIdx*32 + 32 - i - 1
+			blobByteIdx := ((chunkIdx + 1) * 32) - i - 1
 			if blob[blobByteIdx] < gokzg4844.BlsModulus[i] {
 				// go to next chunk
 				break
@@ -542,14 +593,17 @@ func DeterministicBlobFiller(blobId uint64, blob *types.Blob) error {
 				}
 			}
 		}
+
+		// Hash the current hash
+		currentHashed = sha256.Sum256(currentHashed[:])
 	}
 
 	return nil
 }
 
-func BlobGenerator(blobId uint64) (*types.Blob, *types.KZGCommitment, error) {
+func (blobId BlobID) GenerateBlob() (*types.Blob, *types.KZGCommitment, error) {
 	blob := types.Blob{}
-	if err := DeterministicBlobFiller(blobId, &blob); err != nil {
+	if err := blobId.FillBlob(&blob); err != nil {
 		return nil, nil, err
 	}
 	ctx_4844, err := GetKZGContext()
@@ -567,13 +621,13 @@ func BlobGenerator(blobId uint64) (*types.Blob, *types.KZGCommitment, error) {
 	return &blob, &typesKzgCommitment, nil
 }
 
-func BlobDataGenerator(startBlobId uint64, blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
+func BlobDataGenerator(startBlobId BlobID, blobCount uint64) ([]common.Hash, *types.BlobTxWrapData, error) {
 	blobData := types.BlobTxWrapData{
 		Blobs:    make(types.Blobs, blobCount),
 		BlobKzgs: make([]types.KZGCommitment, blobCount),
 	}
 	for i := uint64(0); i < blobCount; i++ {
-		if blob, kzgCommitment, err := BlobGenerator(startBlobId + i); err != nil {
+		if blob, kzgCommitment, err := (startBlobId + BlobID(i)).GenerateBlob(); err != nil {
 			return nil, nil, err
 		} else {
 			blobData.Blobs[i] = *blob
@@ -595,7 +649,7 @@ func BlobDataGenerator(startBlobId uint64, blobCount uint64) ([]common.Hash, *ty
 
 func (tc *BlobTransactionCreator) MakeTransaction(nonce uint64) (*types.Transaction, error) {
 	// Need tx wrap data that will pass blob verification
-	hashes, blobData, err := BlobDataGenerator(tc.BlobId, tc.BlobCount)
+	hashes, blobData, err := BlobDataGenerator(tc.BlobID, tc.BlobCount)
 	if err != nil {
 		return nil, err
 	}

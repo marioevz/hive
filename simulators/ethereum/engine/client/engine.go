@@ -36,7 +36,7 @@ type Engine interface {
 
 	GetPayloadV1(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, error)
 	GetPayloadV2(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, error)
-	GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, error)
+	GetPayloadV3(ctx context.Context, payloadId *api.PayloadID) (api.ExecutableData, *big.Int, *api.BlobsBundle, error)
 
 	NewPayload(ctx context.Context, version int, payload interface{}) (api.PayloadStatusV1, error)
 	NewPayloadV1(ctx context.Context, payload *client_types.ExecutableDataV1) (api.PayloadStatusV1, error)
@@ -45,8 +45,6 @@ type Engine interface {
 
 	GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error)
 	GetPayloadBodiesByHashV1(ctx context.Context, hashes []common.Hash) ([]*client_types.ExecutionPayloadBodyV1, error)
-
-	GetBlobsBundleV1(ctx context.Context, payloadId *api.PayloadID) (*api.BlobsBundle, error)
 
 	LatestForkchoiceSent() (fcState *api.ForkchoiceStateV1, pAttributes *api.PayloadAttributes)
 	LatestNewPayloadSent() (payload *api.ExecutableData)

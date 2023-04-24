@@ -9,13 +9,13 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
 )
 
@@ -66,6 +66,7 @@ var Tests = []test.SpecInterface{
 			// We also verify that the blob transactions are included in the blobs bundle.
 			NewPayloads{
 				ExpectedIncludedBlobCount: 2,
+				ExpectedBlobs:             []helper.BlobID{0, 1},
 			},
 
 			// Try to increase the data gas cost of the blob transactions
@@ -91,6 +92,53 @@ var Tests = []test.SpecInterface{
 			// But it will be included in the next payload
 			NewPayloads{
 				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+			},
+		},
+	},
+	&BlobsBaseSpec{
+
+		Spec: test.Spec{
+			Name: "Replace Blob Transactions",
+			About: `
+			Test sending multiple blob transactions with the same nonce, but
+			higher gas tip so the transaction is replaced.
+			`,
+		},
+
+		// We fork on genesis
+		BlobsForkHeight: 0,
+
+		BlobTestSequence: BlobTestSequence{
+			// Send multiple blob transactions with the same nonce.
+			SendBlobTransactions{ // Blob ID 0
+				BlobTransactionSendCount:      1,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionGasTipCap:      big.NewInt(1e9),
+			},
+			SendBlobTransactions{ // Blob ID 1
+				BlobTransactionSendCount:      1,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionGasTipCap:      big.NewInt(1e11),
+				ReplaceTransactions:           true,
+			},
+			SendBlobTransactions{ // Blob ID 2
+				BlobTransactionSendCount:      1,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionGasTipCap:      big.NewInt(1e12),
+				ReplaceTransactions:           true,
+			},
+			SendBlobTransactions{ // Blob ID 3
+				BlobTransactionSendCount:      1,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+				BlobTransactionGasTipCap:      big.NewInt(1e13),
+				ReplaceTransactions:           true,
+			},
+
+			// We create the first payload, which must contain the blob tx
+			// with the higher tip.
+			NewPayloads{
+				ExpectedIncludedBlobCount: 1,
+				ExpectedBlobs:             []helper.BlobID{3},
 			},
 		},
 	},
@@ -184,76 +232,6 @@ func (bs *BlobsBaseSpec) ConfigureCLMock(cl *clmock.CLMocker) {
 
 type TestBlobTxPool struct {
 	Transactions map[common.Hash]*types.Transaction
-}
-
-func (pool *TestBlobTxPool) VerifyBlobBundle(payload *engine.ExecutableData, blobBundle *engine.BlobsBundle, expectedBlobCount int) error {
-	if payload.BlockHash != blobBundle.BlockHash {
-		return fmt.Errorf("block hash mismatch: %s != %s", payload.BlockHash.String(), blobBundle.BlockHash.String())
-	}
-	if len(blobBundle.Blobs) != expectedBlobCount {
-		return fmt.Errorf("expected %d blob, got %d", expectedBlobCount, len(blobBundle.Blobs))
-	}
-	if len(blobBundle.KZGs) != expectedBlobCount {
-		return fmt.Errorf("expected %d KZG, got %d", expectedBlobCount, len(blobBundle.KZGs))
-	}
-	// Find all blob transactions included in the payload
-	type BlobWrapData struct {
-		VersionedHash common.Hash
-		KZG           types.KZGCommitment
-		Blob          types.Blob
-		Proof         types.KZGProof
-	}
-	var blobDataInPayload = make([]*BlobWrapData, 0)
-
-	for _, binaryTx := range payload.Transactions {
-		// Unmarshal the tx from the payload, which should be the minimal version
-		// of the blob transaction
-		txData := new(types.Transaction)
-		if err := txData.UnmarshalMinimal(binaryTx); err != nil {
-			return err
-		}
-
-		if txData.Type() != types.BlobTxType {
-			continue
-		}
-
-		// Find the transaction in the current pool of known transactions
-		if tx, ok := pool.Transactions[txData.Hash()]; ok {
-			versionedHashes, kzgs, blobs, proofs := tx.BlobWrapData()
-			if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
-				return fmt.Errorf("invalid blob wrap data")
-			}
-			for i := 0; i < len(versionedHashes); i++ {
-				blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
-					VersionedHash: versionedHashes[i],
-					KZG:           kzgs[i],
-					Blob:          blobs[i],
-					Proof:         proofs[i],
-				})
-			}
-		} else {
-			return fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
-		}
-	}
-
-	// Verify that the calculated amount of blobs in the payload matches the
-	// amount of blobs in the bundle
-	if len(blobDataInPayload) != len(blobBundle.Blobs) {
-		return fmt.Errorf("expected %d blobs in the bundle, got %d", len(blobDataInPayload), len(blobBundle.Blobs))
-	}
-
-	for i, blobData := range blobDataInPayload {
-		bundleKzg := blobBundle.KZGs[i]
-		bundleBlob := blobBundle.Blobs[i]
-		if !bytes.Equal(bundleKzg[:], blobData.KZG[:]) {
-			return fmt.Errorf("KZG mismatch at index %d", i)
-		}
-		if !bytes.Equal(bundleBlob[:], blobData.Blob[:]) {
-			return fmt.Errorf("blob mismatch at index %d", i)
-		}
-	}
-
-	return nil
 }
 
 func (pool *TestBlobTxPool) AddBlobTransaction(tx *types.Transaction) {

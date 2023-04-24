@@ -2,13 +2,14 @@
 package suite_blobs
 
 import (
-	"context"
+	"bytes"
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/hive/simulators/ethereum/engine/clmock"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
@@ -17,7 +18,7 @@ import (
 type BlobTestContext struct {
 	*test.Env
 	*TestBlobTxPool
-	CurrentBlobID uint64
+	CurrentBlobID helper.BlobID
 }
 
 // Interface to represent a single step in a blob test
@@ -57,10 +58,12 @@ func (step ParallelSteps) Execute(t *BlobTestContext) error {
 
 // A step that sends a new payload to the client
 type NewPayloads struct {
-	// Number of blob transactions that are expected to be included in the payload
-	ExpectedIncludedBlobCount uint64
 	// Payload Count
 	PayloadCount uint64
+	// Number of blob transactions that are expected to be included in the payload
+	ExpectedIncludedBlobCount uint64
+	// Blob IDs expected to be found in the payload
+	ExpectedBlobs []helper.BlobID
 }
 
 func (step NewPayloads) GetPayloadCount() uint64 {
@@ -71,6 +74,91 @@ func (step NewPayloads) GetPayloadCount() uint64 {
 	return payloadCount
 }
 
+func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *engine.BlobsBundle) error {
+	if len(blobBundle.Blobs) != int(step.ExpectedIncludedBlobCount) {
+		return fmt.Errorf("expected %d blob, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Blobs))
+	}
+	if len(blobBundle.KZGs) != int(step.ExpectedIncludedBlobCount) {
+		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.KZGs))
+	}
+	// Find all blob transactions included in the payload
+	type BlobWrapData struct {
+		VersionedHash common.Hash
+		KZG           types.KZGCommitment
+		Blob          types.Blob
+		Proof         types.KZGProof
+	}
+	var blobDataInPayload = make([]*BlobWrapData, 0)
+
+	for _, binaryTx := range payload.Transactions {
+		// Unmarshal the tx from the payload, which should be the minimal version
+		// of the blob transaction
+		txData := new(types.Transaction)
+		if err := txData.UnmarshalMinimal(binaryTx); err != nil {
+			return err
+		}
+
+		if txData.Type() != types.BlobTxType {
+			continue
+		}
+
+		// Find the transaction in the current pool of known transactions
+		if tx, ok := pool.Transactions[txData.Hash()]; ok {
+			versionedHashes, kzgs, blobs, proofs := tx.BlobWrapData()
+			if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
+				return fmt.Errorf("invalid blob wrap data")
+			}
+			for i := 0; i < len(versionedHashes); i++ {
+				blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
+					VersionedHash: versionedHashes[i],
+					KZG:           kzgs[i],
+					Blob:          blobs[i],
+					Proof:         proofs[i],
+				})
+			}
+		} else {
+			return fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
+		}
+	}
+
+	// Verify that the calculated amount of blobs in the payload matches the
+	// amount of blobs in the bundle
+	if len(blobDataInPayload) != len(blobBundle.Blobs) {
+		return fmt.Errorf("expected %d blobs in the bundle, got %d", len(blobDataInPayload), len(blobBundle.Blobs))
+	}
+
+	for i, blobData := range blobDataInPayload {
+		bundleKzg := blobBundle.KZGs[i]
+		bundleBlob := blobBundle.Blobs[i]
+		if !bytes.Equal(bundleKzg[:], blobData.KZG[:]) {
+			return fmt.Errorf("KZG mismatch at index %d", i)
+		}
+		if !bytes.Equal(bundleBlob[:], blobData.Blob[:]) {
+			return fmt.Errorf("blob mismatch at index %d", i)
+		}
+	}
+
+	if len(step.ExpectedBlobs) != 0 {
+		// Verify that the blobs in the payload match the expected blobs
+		for _, expectedBlob := range step.ExpectedBlobs {
+			found := false
+			for _, blobData := range blobDataInPayload {
+				if ok, err := expectedBlob.VerifyBlob(&blobData.Blob); err != nil {
+					return err
+				} else if ok {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("could not find expected blob %d", expectedBlob)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (step NewPayloads) Execute(t *BlobTestContext) error {
 	// Create a new payload
 	// Produce the payload
@@ -78,18 +166,15 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 	for p := uint64(0); p < payloadCount; p++ {
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			OnGetPayload: func() {
-				// Get the blobs bundle from the node too
-				ctx, cancel := context.WithTimeout(t.TestContext, 10*time.Second)
-				defer cancel()
-
-				blobBundle, err := t.Engine.GetBlobsBundleV1(ctx, t.CLMock.NextPayloadID)
-				if err != nil {
-					t.Fatalf("FAIL: Error getting blobs bundle: %v", err)
+				// Get the latest blob bundle
+				blobBundle := t.CLMock.LatestBlobBundle
+				if blobBundle == nil {
+					t.Fatalf("FAIL: Error getting blobs bundle: %v", blobBundle)
 				}
 
 				payload := &t.CLMock.LatestPayloadBuilt
 
-				if err := t.VerifyBlobBundle(payload, blobBundle, int(step.ExpectedIncludedBlobCount)); err != nil {
+				if err := step.VerifyBlobBundle(t.TestBlobTxPool, payload, blobBundle); err != nil {
 					t.Fatalf("FAIL: Error verifying blob bundle: %v", err)
 				}
 			},
@@ -112,6 +197,8 @@ type SendBlobTransactions struct {
 	BlobTransactionMaxDataGasCost *big.Int
 	// Gas Tip Cap for every blob transaction
 	BlobTransactionGasTipCap *big.Int
+	// Replace transactions
+	ReplaceTransactions bool
 }
 
 func (step SendBlobTransactions) GetBlobsPerTransaction() uint64 {
@@ -128,23 +215,34 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 	blobCountPerTx := step.GetBlobsPerTransaction()
 	//  Send the blob transactions
 	for bTx := uint64(0); bTx < step.BlobTransactionSendCount; bTx++ {
-		blobTx, err := helper.SendNextTransaction(t.TestContext, t.Engine,
-			&helper.BlobTransactionCreator{
-				To:         &addr,
-				GasLimit:   100000,
-				GasTip:     step.BlobTransactionGasTipCap,
-				DataGasFee: step.BlobTransactionMaxDataGasCost,
-				BlobCount:  blobCountPerTx,
-				BlobId:     t.CurrentBlobID,
-			},
+		blobTxCreator := &helper.BlobTransactionCreator{
+			To:         &addr,
+			GasLimit:   100000,
+			GasTip:     step.BlobTransactionGasTipCap,
+			DataGasFee: step.BlobTransactionMaxDataGasCost,
+			BlobCount:  blobCountPerTx,
+			BlobID:     t.CurrentBlobID,
+		}
+		var (
+			blobTx *types.Transaction
+			err    error
 		)
+		if step.ReplaceTransactions {
+			blobTx, err = helper.ReplaceLastTransaction(t.TestContext, t.Engine,
+				blobTxCreator,
+			)
+		} else {
+			blobTx, err = helper.SendNextTransaction(t.TestContext, t.Engine,
+				blobTxCreator,
+			)
+		}
 		if err != nil {
 			t.Fatalf("FAIL: Error sending blob transaction: %v", err)
 		}
 		VerifyTransactionFromNode(t.TestContext, t.Engine, blobTx)
 		t.AddBlobTransaction(blobTx)
 		t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
-		t.CurrentBlobID += blobCountPerTx
+		t.CurrentBlobID += helper.BlobID(blobCountPerTx)
 	}
 	return nil
 }

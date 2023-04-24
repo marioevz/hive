@@ -783,12 +783,12 @@ func (n *GethNode) GetPayloadV2(ctx context.Context, payloadId *beacon.PayloadID
 	return *p.ExecutionPayload, p.BlockValue, err
 }
 
-func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, error) {
+func (n *GethNode) GetPayloadV3(ctx context.Context, payloadId *beacon.PayloadID) (beacon.ExecutableData, *big.Int, *beacon.BlobsBundle, error) {
 	p, err := n.api.GetPayloadV3(*payloadId)
 	if p == nil || err != nil {
-		return beacon.ExecutableData{}, nil, err
+		return beacon.ExecutableData{}, nil, nil, err
 	}
-	return *p.ExecutionPayload, p.BlockValue, err
+	return *p.ExecutionPayload, p.BlockValue, p.BlobsBundle, err
 }
 
 func (n *GethNode) GetPayloadBodiesByRangeV1(ctx context.Context, start uint64, count uint64) ([]*client_types.ExecutionPayloadBodyV1, error) {

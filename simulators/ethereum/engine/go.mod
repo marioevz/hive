@@ -3,10 +3,13 @@ module github.com/ethereum/hive/simulators/ethereum/engine
 go 1.18
 
 require (
+	github.com/crate-crypto/go-kzg-4844 v0.1.0
 	github.com/ethereum/go-ethereum v1.11.4
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/golang-jwt/jwt/v4 v4.4.3
+	github.com/holiman/uint256 v1.2.1
 	github.com/pkg/errors v0.9.1
+	github.com/protolambda/ztyp v0.2.1
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
 )
 
@@ -26,7 +29,6 @@ require (
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.10.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/crate-crypto/go-kzg-4844 v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
@@ -47,7 +49,6 @@ require (
 	github.com/graph-gophers/graphql-go v1.4.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.2.1 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.12.1 // indirect
@@ -69,7 +70,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/protolambda/ztyp v0.2.1 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/rs/cors v1.8.2 // indirect
@@ -94,4 +94,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230418152206-a05b83bdcdfb
+replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230421223512-47cf18779924
