@@ -1,6 +1,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -109,6 +110,18 @@ func (s Spec) GetGenesis() *core.Genesis {
 		genesisPath = fmt.Sprintf("./init/%s", s.GenesisFile)
 	}
 	genesis := helper.LoadGenesis(genesisPath)
+
+	// Add balance to all the test accounts
+	for _, testAcc := range globals.TestAccounts {
+		balance, ok := new(big.Int).SetString("123450000000000000000", 16)
+		if !ok {
+			panic(errors.New("failed to parse balance"))
+		}
+		genesis.Alloc[testAcc.GetAddress()] = core.GenesisAccount{
+			Balance: balance,
+		}
+	}
+
 	return &genesis
 }
 
