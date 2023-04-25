@@ -1,5 +1,9 @@
-ARG branch=latest
-FROM nethermindeth/hive:$branch
+ARG branch=eip-4844-v5
+# ARG branch=latest
+ARG owner=nethermindeth
+ARG repo=nethermind
+# ARG repo=hive
+FROM $owner/$repo:$branch
 
 RUN apt-get update && apt-get install -y wget
 RUN wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -O /usr/local/bin/jq && \
