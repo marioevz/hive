@@ -108,8 +108,8 @@ func addTestsToSuite(sim *hivesim.Simulation, suite *hivesim.Suite, tests []test
 			newParams = newParams.Set("HIVE_SHANGHAI_TIMESTAMP", fmt.Sprintf("%d", currentTest.GetForkConfig().ShanghaiTimestamp))
 			// Ensure the merge transition is activated before shanghai.
 			newParams = newParams.Set("HIVE_MERGE_BLOCK_ID", "0")
-			if currentTest.GetForkConfig().ShardingForkTimestamp != nil {
-				newParams = newParams.Set("HIVE_SHARDING_FORK_TIMESTAMP", fmt.Sprintf("%d", currentTest.GetForkConfig().ShardingForkTimestamp))
+			if currentTest.GetForkConfig().CancunTimestamp != nil {
+				newParams = newParams.Set("HIVE_CANCUN_TIMESTAMP", fmt.Sprintf("%d", currentTest.GetForkConfig().CancunTimestamp))
 			}
 		}
 

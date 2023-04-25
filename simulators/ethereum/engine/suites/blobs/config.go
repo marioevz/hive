@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 )
 
-// Generates the fork config, including sharding fork timestamp.
+// Generates the fork config, including cancun fork timestamp.
 func (bs *BlobsBaseSpec) GetForkConfig() globals.ForkConfig {
 	return globals.ForkConfig{
-		ShanghaiTimestamp:     big.NewInt(0),
-		ShardingForkTimestamp: big.NewInt(int64(bs.BlobsForkHeight) * int64(bs.GetBlockTimeIncrements())),
+		ShanghaiTimestamp: big.NewInt(0),
+		CancunTimestamp:   big.NewInt(int64(bs.BlobsForkHeight) * int64(bs.GetBlockTimeIncrements())),
 	}
 }
 

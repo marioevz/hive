@@ -133,6 +133,6 @@ var (
 
 // Global types
 type ForkConfig struct {
-	ShanghaiTimestamp     *big.Int
-	ShardingForkTimestamp *big.Int
+	ShanghaiTimestamp *big.Int
+	CancunTimestamp   *big.Int
 }

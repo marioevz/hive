@@ -113,8 +113,8 @@ func isShanghai(blockTimestamp uint64, shanghaiTimestamp *big.Int) bool {
 	return shanghaiTimestamp != nil && big.NewInt(int64(blockTimestamp)).Cmp(shanghaiTimestamp) >= 0
 }
 
-func isSharding(blockTimestamp uint64, shardingTimestamp *big.Int) bool {
-	return shardingTimestamp != nil && big.NewInt(int64(blockTimestamp)).Cmp(shardingTimestamp) >= 0
+func isCancun(blockTimestamp uint64, cancunTimestamp *big.Int) bool {
+	return cancunTimestamp != nil && big.NewInt(int64(blockTimestamp)).Cmp(cancunTimestamp) >= 0
 }
 
 func NewCLMocker(t *hivesim.T, slotsToSafe, slotsToFinalized, safeSlotsToImportOptimistically *big.Int, forkConfig globals.ForkConfig) *CLMocker {
@@ -369,7 +369,7 @@ func (cl *CLMocker) GetNextPayload() {
 	var err error
 	ctx, cancel := context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 	defer cancel()
-	if isSharding(cl.LatestPayloadAttributes.Timestamp, cl.ShardingForkTimestamp) {
+	if isCancun(cl.LatestPayloadAttributes.Timestamp, cl.CancunTimestamp) {
 		cl.LatestPayloadBuilt, cl.LatestBlockValue, cl.LatestBlobBundle, err = cl.NextBlockProducer.GetPayloadV3(ctx, cl.NextPayloadID)
 	} else if isShanghai(cl.LatestPayloadAttributes.Timestamp, cl.ShanghaiTimestamp) {
 		cl.LatestPayloadBuilt, cl.LatestBlockValue, err = cl.NextBlockProducer.GetPayloadV2(ctx, cl.NextPayloadID)
@@ -619,7 +619,7 @@ func (cl *CLMocker) BroadcastNewPayload(payload *api.ExecutableData) []ExecutePa
 			execPayloadResp api.PayloadStatusV1
 			err             error
 		)
-		if isSharding(payload.Timestamp, cl.ShardingForkTimestamp) {
+		if isCancun(payload.Timestamp, cl.CancunTimestamp) {
 			execPayloadResp, err = ec.NewPayloadV3(ctx, payload)
 		} else if isShanghai(payload.Timestamp, cl.ShanghaiTimestamp) {
 			execPayloadResp, err = ec.NewPayloadV2(ctx, payload)

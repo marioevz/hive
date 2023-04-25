@@ -34,9 +34,9 @@ var Tests = []test.SpecInterface{
 	&BlobsBaseSpec{
 
 		Spec: test.Spec{
-			Name: "Blob Transactions On Genesis",
+			Name: "Blob Transactions On Block 1, Cancun Genesis",
 			About: `
-			Tests the sharding fork on genesis.
+			Tests the Cancun fork since genesis.
 			`,
 		},
 
