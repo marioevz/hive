@@ -24,7 +24,7 @@
 FROM alpine:latest as builder
 # ARG branch=master
 # ARG repo=ethereum
-ARG branch=cancun
+ARG branch=eip-4844
 ARG repo=mdehoog
 RUN \
   apk add --update bash curl jq go git make gcc musl-dev              \
