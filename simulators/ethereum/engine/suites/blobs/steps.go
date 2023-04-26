@@ -107,39 +107,42 @@ func (step NewPayloads) GetPayloadCount() uint64 {
 	return payloadCount
 }
 
-func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *engine.BlobsBundle) error {
-	if len(blobBundle.Blobs) != int(step.ExpectedIncludedBlobCount) {
-		return fmt.Errorf("expected %d blob, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Blobs))
-	}
-	if len(blobBundle.Commitments) != int(step.ExpectedIncludedBlobCount) {
-		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Commitments))
-	}
-	// Find all blob transactions included in the payload
-	type BlobWrapData struct {
-		VersionedHash common.Hash
-		KZG           types.KZGCommitment
-		Blob          types.Blob
-		Proof         types.KZGProof
-	}
-	var blobDataInPayload = make([]*BlobWrapData, 0)
+type BlobWrapData struct {
+	VersionedHash common.Hash
+	KZG           types.KZGCommitment
+	Blob          types.Blob
+	Proof         types.KZGProof
+}
 
-	for _, binaryTx := range payload.Transactions {
+func GetBlobDataInPayload(pool *TestBlobTxPool, payload *engine.ExecutableData) ([]*BlobWrapData, error) {
+	// Find all blob transactions included in the payload
+	var blobDataInPayload = make([]*BlobWrapData, 0)
+	signer := types.NewDankSigner(globals.ChainID)
+
+	for i, binaryTx := range payload.Transactions {
 		// Unmarshal the tx from the payload, which should be the minimal version
 		// of the blob transaction
 		txData := new(types.Transaction)
 		if err := txData.UnmarshalMinimal(binaryTx); err != nil {
-			return err
+			return nil, err
 		}
 
 		if txData.Type() != types.BlobTxType {
 			continue
 		}
 
+		// Print transaction info
+		sender, err := signer.Sender(txData)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("Tx %d in the payload: From: %s, Nonce: %d\n", i, sender, txData.Nonce())
+
 		// Find the transaction in the current pool of known transactions
 		if tx, ok := pool.Transactions[txData.Hash()]; ok {
 			versionedHashes, kzgs, blobs, proofs := tx.BlobWrapData()
 			if len(versionedHashes) != len(kzgs) || len(kzgs) != len(blobs) || len(blobs) != len(proofs) {
-				return fmt.Errorf("invalid blob wrap data")
+				return nil, fmt.Errorf("invalid blob wrap data")
 			}
 			for i := 0; i < len(versionedHashes); i++ {
 				blobDataInPayload = append(blobDataInPayload, &BlobWrapData{
@@ -150,8 +153,22 @@ func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.E
 				})
 			}
 		} else {
-			return fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
+			return nil, fmt.Errorf("could not find transaction %s in the pool", txData.Hash().String())
 		}
+	}
+	return blobDataInPayload, nil
+}
+
+func (step NewPayloads) VerifyBlobBundle(pool *TestBlobTxPool, payload *engine.ExecutableData, blobBundle *engine.BlobsBundle) error {
+	blobDataInPayload, err := GetBlobDataInPayload(pool, payload)
+	if err != nil {
+		return err
+	}
+	if len(blobBundle.Blobs) != int(step.ExpectedIncludedBlobCount) {
+		return fmt.Errorf("expected %d blob, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Blobs))
+	}
+	if len(blobBundle.Commitments) != int(step.ExpectedIncludedBlobCount) {
+		return fmt.Errorf("expected %d KZG, got %d", step.ExpectedIncludedBlobCount, len(blobBundle.Commitments))
 	}
 
 	// Verify that the calculated amount of blobs in the payload matches the
