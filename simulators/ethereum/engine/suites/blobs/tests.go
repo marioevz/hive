@@ -201,6 +201,12 @@ var Tests = []test.SpecInterface{
 				EngineStarter: hive_rpc.HiveRPCEngineStarter{},
 			},
 
+			// Create a few blocks without any blobs
+			NewPayloads{
+				PayloadCount:              10,
+				ExpectedIncludedBlobCount: 0,
+			},
+
 			// First send the MAX_BLOBS_PER_BLOCK-1 blob transactions from
 			// account A, to client A.
 			SendBlobTransactions{
