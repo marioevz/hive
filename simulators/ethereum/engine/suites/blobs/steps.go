@@ -59,35 +59,47 @@ func (step ParallelSteps) Execute(t *BlobTestContext) error {
 }
 
 // A step that launches a new client
-type LaunchClient struct {
+type LaunchClients struct {
 	client.EngineStarter
+	ClientCount              uint64
 	SkipConnectingToBootnode bool
 	SkipAddingToCLMock       bool
 }
 
-func (step LaunchClient) Execute(t *BlobTestContext) error {
+func (step LaunchClients) GetClientCount() uint64 {
+	clientCount := step.ClientCount
+	if clientCount == 0 {
+		clientCount = 1
+	}
+	return clientCount
+}
+
+func (step LaunchClients) Execute(t *BlobTestContext) error {
 	// Launch a new client
 	var (
 		client client.EngineClient
 		err    error
 	)
-	if !step.SkipConnectingToBootnode {
-		client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles, t.Engines[0])
-	} else {
-		client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles)
-	}
-	if err != nil {
-		return err
-	}
-	t.Engines = append(t.Engines, client)
-	if !step.SkipAddingToCLMock {
-		t.CLMock.AddEngineClient(client)
+	clientCount := step.GetClientCount()
+	for i := uint64(0); i < clientCount; i++ {
+		if !step.SkipConnectingToBootnode {
+			client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles, t.Engines[0])
+		} else {
+			client, err = step.StartClient(t.T, t.TestContext, t.Genesis, t.ClientParams, t.ClientFiles)
+		}
+		if err != nil {
+			return err
+		}
+		t.Engines = append(t.Engines, client)
+		if !step.SkipAddingToCLMock {
+			t.CLMock.AddEngineClient(client)
+		}
 	}
 	return nil
 }
 
-func (step LaunchClient) Description() string {
-	return "Launch new engine client"
+func (step LaunchClients) Description() string {
+	return fmt.Sprintf("Launch %d new engine client(s)", step.GetClientCount())
 }
 
 // A step that sends a new payload to the client

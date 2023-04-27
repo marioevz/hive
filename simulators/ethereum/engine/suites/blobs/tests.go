@@ -198,7 +198,7 @@ var Tests = []test.SpecInterface{
 
 		BlobTestSequence: BlobTestSequence{
 			// Start a secondary client to also receive blob transactions
-			LaunchClient{
+			LaunchClients{
 				EngineStarter: hive_rpc.HiveRPCEngineStarter{},
 				// Skip adding the second client to the CL Mock to guarantee
 				// that all payloads are produced by client A.
