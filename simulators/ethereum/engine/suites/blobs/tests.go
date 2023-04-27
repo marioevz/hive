@@ -3,6 +3,7 @@ package suite_blobs
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/ethereum/hive/simulators/ethereum/engine/client/hive_rpc"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
@@ -199,11 +200,16 @@ var Tests = []test.SpecInterface{
 			// Start a secondary client to also receive blob transactions
 			LaunchClient{
 				EngineStarter: hive_rpc.HiveRPCEngineStarter{},
+				// Skip adding the second client to the CL Mock to guarantee
+				// that all payloads are produced by client A.
+				// This is done to not have client B prioritizing single-blob
+				// transactions to fill one single payload.
+				SkipAddingToCLMock: true,
 			},
 
-			// Create a few blocks without any blobs
+			// Create a block without any blobs to get past genesis
 			NewPayloads{
-				PayloadCount:              10,
+				PayloadCount:              1,
 				ExpectedIncludedBlobCount: 0,
 			},
 
@@ -230,6 +236,8 @@ var Tests = []test.SpecInterface{
 			NewPayloads{
 				PayloadCount:              5,
 				ExpectedIncludedBlobCount: MAX_BLOBS_PER_BLOCK,
+				// Wait a bit more on before requesting the built payload from the client
+				GetPayloadDelay: 2,
 			},
 		},
 	},
@@ -294,6 +302,7 @@ var Tests = []test.SpecInterface{
 type BlobsBaseSpec struct {
 	test.Spec
 	TimeIncrements  uint64 // Timestamp increments per block throughout the test
+	GetPayloadDelay uint64 // Delay between FcU and GetPayload calls
 	BlobsForkHeight uint64 // Withdrawals activation fork height
 	BlobTestSequence
 }
@@ -306,6 +315,10 @@ func (bs *BlobsBaseSpec) Execute(t *test.Env) {
 	blobTestCtx := &BlobTestContext{
 		Env:            t,
 		TestBlobTxPool: new(TestBlobTxPool),
+	}
+
+	if bs.GetPayloadDelay != 0 {
+		t.CLMock.PayloadProductionClientDelay = time.Duration(bs.GetPayloadDelay) * time.Second
 	}
 
 	for stepId, step := range bs.BlobTestSequence {

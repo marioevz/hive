@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -97,6 +98,8 @@ type NewPayloads struct {
 	ExpectedIncludedBlobCount uint64
 	// Blob IDs expected to be found in the payload
 	ExpectedBlobs []helper.BlobID
+	// Delay between FcU and GetPayload calls
+	GetPayloadDelay uint64
 }
 
 func (step NewPayloads) GetPayloadCount() uint64 {
@@ -217,22 +220,33 @@ func (step NewPayloads) Execute(t *BlobTestContext) error {
 	// Create a new payload
 	// Produce the payload
 	payloadCount := step.GetPayloadCount()
+
+	var originalGetPayloadDelay time.Duration
+	if step.GetPayloadDelay != 0 {
+		originalGetPayloadDelay = t.CLMock.PayloadProductionClientDelay
+		t.CLMock.PayloadProductionClientDelay = time.Duration(step.GetPayloadDelay) * time.Second
+	}
 	for p := uint64(0); p < payloadCount; p++ {
 		t.CLMock.ProduceSingleBlock(clmock.BlockProcessCallbacks{
 			OnGetPayload: func() {
 				// Get the latest blob bundle
 				blobBundle := t.CLMock.LatestBlobBundle
 				if blobBundle == nil {
-					t.Fatalf("FAIL: Error getting blobs bundle: %v", blobBundle)
+					t.Fatalf("FAIL: Error getting blobs bundle (payload %d/%d): %v", p+1, payloadCount, blobBundle)
 				}
 
 				payload := &t.CLMock.LatestPayloadBuilt
 
 				if err := step.VerifyBlobBundle(t.TestBlobTxPool, payload, blobBundle); err != nil {
-					t.Fatalf("FAIL: Error verifying blob bundle: %v", err)
+					t.Fatalf("FAIL: Error verifying blob bundle (payload %d/%d): %v", p+1, payloadCount, err)
 				}
 			},
 		})
+		t.Logf("INFO: Correctly produced payload %d/%d", p+1, payloadCount)
+	}
+	if step.GetPayloadDelay != 0 {
+		// Restore the original delay
+		t.CLMock.PayloadProductionClientDelay = originalGetPayloadDelay
 	}
 	return nil
 }
