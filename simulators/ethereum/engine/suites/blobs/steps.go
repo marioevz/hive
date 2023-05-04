@@ -310,6 +310,7 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 			To:         &addr,
 			GasLimit:   100000,
 			GasTip:     step.BlobTransactionGasTipCap,
+			GasFee:     step.BlobTransactionGasFeeCap,
 			DataGasFee: step.BlobTransactionMaxDataGasCost,
 			BlobCount:  blobCountPerTx,
 			BlobID:     t.CurrentBlobID,
