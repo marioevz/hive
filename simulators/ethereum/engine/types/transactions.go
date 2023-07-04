@@ -37,8 +37,9 @@ type Transaction interface {
 var _ Transaction = (*types.Transaction)(nil)
 
 type TransactionWithBlobData struct {
-	Tx       *types.Transaction
-	BlobData *BlobTxWrapData
+	Tx             *types.Transaction
+	BlobData       *BlobTxWrapData
+	MarshalMinimal bool
 }
 
 func (tx *TransactionWithBlobData) Protected() bool {
@@ -107,7 +108,7 @@ func (tx *TransactionWithBlobData) BlobHashes() []common.Hash {
 
 func (tx *TransactionWithBlobData) MarshalBinary() ([]byte, error) {
 
-	if tx.BlobData == nil {
+	if tx.BlobData == nil || tx.MarshalMinimal {
 		return tx.Tx.MarshalBinary()
 	}
 
