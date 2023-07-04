@@ -54,6 +54,7 @@ func Run(testSpec SpecInterface, ttd *big.Int, timeout time.Duration, t *hivesim
 	consensusConfig := testSpec.GetConsensusConfig()
 	clMocker := clmock.NewCLMocker(
 		t,
+		genesis,
 		consensusConfig.SlotsToSafe,
 		consensusConfig.SlotsToFinalized,
 		big.NewInt(consensusConfig.SafeSlotsToImportOptimistically),
