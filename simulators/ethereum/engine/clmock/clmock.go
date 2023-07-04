@@ -3,6 +3,7 @@ package clmock
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
@@ -81,6 +84,9 @@ type CLMocker struct {
 	NextPayloadID        *api.PayloadID
 	CurrentPayloadNumber uint64
 
+	// Chain History
+	HeaderHistory map[uint64]*types.Header
+
 	// PoS Chain History Information
 	PrevRandaoHistory      map[uint64]common.Hash
 	ExecutedPayloadHistory ExecutableDataHistory
@@ -101,9 +107,11 @@ type CLMocker struct {
 	TTDReached                      bool
 	TransitionPayloadTimestamp      *big.Int
 	SafeSlotsToImportOptimistically *big.Int
+	ChainTotalDifficulty            *big.Int
 
 	// Fork configuration
 	*globals.ForkConfig
+	Genesis *core.Genesis
 
 	NextWithdrawals types.Withdrawals
 
@@ -112,7 +120,7 @@ type CLMocker struct {
 	TimeoutContext context.Context
 }
 
-func NewCLMocker(t *hivesim.T, slotsToSafe, slotsToFinalized, safeSlotsToImportOptimistically *big.Int, forkConfig globals.ForkConfig) *CLMocker {
+func NewCLMocker(t *hivesim.T, genesis *core.Genesis, slotsToSafe, slotsToFinalized, safeSlotsToImportOptimistically *big.Int, forkConfig globals.ForkConfig) *CLMocker {
 	// Init random seed for different purposes
 	seed := time.Now().Unix()
 	t.Logf("Randomness seed: %v\n", seed)
@@ -146,11 +154,24 @@ func NewCLMocker(t *hivesim.T, slotsToSafe, slotsToFinalized, safeSlotsToImportO
 			SafeBlockHash:      common.Hash{},
 			FinalizedBlockHash: common.Hash{},
 		},
-		ForkConfig:  &forkConfig,
-		TestContext: context.Background(),
+		ChainTotalDifficulty: genesis.Difficulty,
+		ForkConfig:           &forkConfig,
+		Genesis:              genesis,
+		TestContext:          context.Background(),
 	}
 
+	// Create header history
+	newCLMocker.HeaderHistory = make(map[uint64]*types.Header)
+
+	// Add genesis to the header history
+	newCLMocker.HeaderHistory[0] = genesis.ToBlock().Header()
+
 	return newCLMocker
+}
+
+// Return genesis block of the canonical chain
+func (cl *CLMocker) GenesisBlock() *types.Block {
+	return cl.Genesis.ToBlock()
 }
 
 // Add a Client to be kept in sync with the latest payloads
@@ -198,6 +219,45 @@ func (cl *CLMocker) IsOptimisticallySyncing() bool {
 	return diff.Cmp(cl.SafeSlotsToImportOptimistically) >= 0
 }
 
+func (cl *CLMocker) ForkID() forkid.ID {
+	return forkid.NewID(cl.Genesis.Config, cl.GenesisBlock().Hash(), cl.LatestHeader.Number.Uint64(), cl.Genesis.Timestamp)
+}
+
+func (cl *CLMocker) GetHeaders(amount uint64, originHash common.Hash, originNumber uint64, reverse bool, skip uint64) ([]*types.Header, error) {
+	if amount < 1 {
+		return nil, errors.New("no block headers requested")
+	}
+
+	headers := make([]*types.Header, amount)
+	var blockNumber uint64
+
+	// range over blocks to check if our chain has the requested header
+	for _, h := range cl.HeaderHistory {
+		if h.Hash() == originHash || h.Number.Uint64() == originNumber {
+			headers[0] = h
+			blockNumber = h.Number.Uint64()
+		}
+	}
+	if headers[0] == nil {
+		return nil, fmt.Errorf("no headers found for given origin number %v, hash %v", originNumber, originHash)
+	}
+
+	if reverse {
+		for i := 1; i < int(amount); i++ {
+			blockNumber -= (1 - skip)
+			headers[i] = cl.HeaderHistory[blockNumber]
+		}
+		return headers, nil
+	}
+
+	for i := 1; i < int(amount); i++ {
+		blockNumber += (1 + skip)
+		headers[i] = cl.HeaderHistory[blockNumber]
+	}
+
+	return headers, nil
+}
+
 // Sets the specified client's chain head as Terminal PoW block by sending the initial forkchoiceUpdated.
 func (cl *CLMocker) SetTTDBlockClient(ec client.EngineClient) {
 	var err error
@@ -208,18 +268,20 @@ func (cl *CLMocker) SetTTDBlockClient(ec client.EngineClient) {
 	if err != nil {
 		cl.Fatalf("CLMocker: Unable to get latest header: %v", err)
 	}
+	cl.HeaderHistory[cl.LatestHeader.Number.Uint64()] = cl.LatestHeader
 
 	ctx, cancel = context.WithTimeout(cl.TestContext, globals.RPCTimeout)
 	defer cancel()
 
-	if ttd, err := ec.GetTotalDifficulty(ctx); err != nil {
+	if td, err := ec.GetTotalDifficulty(ctx); err != nil {
 		cl.Fatalf("CLMocker: Error getting total difficulty from engine client: %v", err)
-	} else if ttd.Cmp(ec.TerminalTotalDifficulty()) < 0 {
-		cl.Fatalf("CLMocker: Attempted to set TTD Block when TTD had not been reached: %d > %d", ec.TerminalTotalDifficulty(), ttd)
+	} else if td.Cmp(ec.TerminalTotalDifficulty()) < 0 {
+		cl.Fatalf("CLMocker: Attempted to set TTD Block when TTD had not been reached: %d > %d", ec.TerminalTotalDifficulty(), td)
 	} else {
-		cl.Logf("CLMocker: TTD has been reached at block %d (%d>=%d)\n", cl.LatestHeader.Number, ttd, ec.TerminalTotalDifficulty())
+		cl.Logf("CLMocker: TTD has been reached at block %d (%d>=%d)\n", cl.LatestHeader.Number, td, ec.TerminalTotalDifficulty())
 		jsH, _ := json.MarshalIndent(cl.LatestHeader, "", " ")
 		cl.Logf("CLMocker: Client: %s, Block %d: %s\n", ec.ID(), cl.LatestHeader.Number, jsH)
+		cl.ChainTotalDifficulty = td
 	}
 
 	cl.TTDReached = true
@@ -602,7 +664,7 @@ func (cl *CLMocker) ProduceSingleBlock(callbacks BlockProcessCallbacks) {
 	if cl.LatestHeader == nil {
 		cl.Fatalf("CLMocker: None of the clients accepted the newly constructed payload")
 	}
-
+	cl.HeaderHistory[cl.LatestHeadNumber.Uint64()] = cl.LatestHeader
 }
 
 // Loop produce PoS blocks by using the Engine API
