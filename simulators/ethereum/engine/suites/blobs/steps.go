@@ -22,7 +22,6 @@ import (
 type BlobTestContext struct {
 	*test.Env
 	*TestBlobTxPool
-	CurrentBlobID helper.BlobID
 }
 
 // Interface to represent a single step in a test vector
@@ -562,9 +561,13 @@ func (step SendBlobTransactions) Execute(t *BlobTestContext) error {
 		if !step.SkipVerificationFromNode {
 			VerifyTransactionFromNode(t.TestContext, engine, blobTx)
 		}
+		t.TestBlobTxPool.Mutex.Lock()
 		t.AddBlobTransaction(blobTx)
+		t.HashesByIndex[t.CurrentTransactionIndex] = blobTx.Hash()
+		t.CurrentTransactionIndex += 1
 		t.Logf("INFO: Sent blob transaction: %s", blobTx.Hash().String())
 		t.CurrentBlobID += helper.BlobID(blobCountPerTx)
+		t.TestBlobTxPool.Mutex.Unlock()
 	}
 	return nil
 }

@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client"
+	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	typ "github.com/ethereum/hive/simulators/ethereum/engine/types"
 )
 
@@ -57,7 +59,11 @@ func CalcExcessDataGas(parentExcessDataGas, parentDataGasUsed uint64) uint64 {
 }
 
 type TestBlobTxPool struct {
-	Transactions map[common.Hash]typ.Transaction
+	Mutex                   sync.Mutex
+	CurrentBlobID           helper.BlobID
+	CurrentTransactionIndex uint64
+	Transactions            map[common.Hash]typ.Transaction
+	HashesByIndex           map[uint64]common.Hash
 }
 
 func (pool *TestBlobTxPool) AddBlobTransaction(tx typ.Transaction) {
