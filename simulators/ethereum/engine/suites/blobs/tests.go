@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/hive/simulators/ethereum/engine/client/hive_rpc"
 	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/test"
@@ -1282,6 +1283,32 @@ var Tests = []test.SpecInterface{
 			},
 		},
 	},
+
+	// DevP2P tests
+	&BlobsBaseSpec{
+		Spec: test.Spec{
+			Name: "Request Blob Pooled Transactions",
+			About: `
+			Requests blob pooled transactions and verify correct coding.
+			`,
+		},
+		TestSequence: TestSequence{
+			// Get past the genesis
+			NewPayloads{
+				ExpectedIncludedBlobCount: 0,
+			},
+			// Send multiple transactions with multiple blobs each
+			SendBlobTransactions{
+				BlobTransactionSendCount:      1,
+				BlobTransactionMaxDataGasCost: big.NewInt(1),
+			},
+			DevP2PRequestPooledTransactionHash{
+				ClientIndex:                 0,
+				TransactionIndexes:          []uint64{0},
+				WaitForNewPooledTransaction: true,
+			},
+		},
+	},
 }
 
 // Blobs base spec
@@ -1305,6 +1332,8 @@ func (bs *BlobsBaseSpec) Execute(t *test.Env) {
 		Env:            t,
 		TestBlobTxPool: new(TestBlobTxPool),
 	}
+
+	blobTestCtx.TestBlobTxPool.HashesByIndex = make(map[uint64]common.Hash)
 
 	if bs.GetPayloadDelay != 0 {
 		t.CLMock.PayloadProductionClientDelay = time.Duration(bs.GetPayloadDelay) * time.Second
