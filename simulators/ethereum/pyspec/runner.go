@@ -137,7 +137,7 @@ func (tc *testcase) run(t *hivesim.T) {
 			int(engineNewPayload.Version),
 			engineNewPayload.Payload,
 			&engineNewPayload.BlobVersionedHashes,
-			nil, // TODO: Fix in pyspec PR
+			engineNewPayload.ParentBeaconRoot,
 		)
 		if plErr != nil {
 			if plException == plErr.Error() {
