@@ -3,7 +3,7 @@ module github.com/ethereum/hive/simulators/ethereum/pyspec
 go 1.20
 
 require (
-	github.com/ethereum/go-ethereum v1.12.1-0.20230715212736-b058cf454b3b
+	github.com/ethereum/go-ethereum v1.12.1-0.20230727141508-d9556533c34f
 	github.com/ethereum/hive v0.0.0-20230616141546-33068992107d
 	github.com/ethereum/hive/simulators/ethereum/engine v0.0.0-20230616141546-33068992107d
 )
@@ -35,7 +35,7 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
+	github.com/holiman/uint256 v1.2.3 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect

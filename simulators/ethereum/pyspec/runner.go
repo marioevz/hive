@@ -115,7 +115,10 @@ func (tc *testcase) run(t *hivesim.T) {
 	}
 	if genesisBlock.Hash() != tc.fixture.json.Genesis.Hash {
 		tc.failedErr = errors.New("genesis hash mismatch")
-		t.Fatalf("genesis hash mismatch")
+		t.Logf("blobGasUsed: %v", *tc.fixture.json.Genesis.BlobGasUsed)
+		t.Logf("blobGasUsed: %v", genesisBlock.BlobGasUsed())
+		t.Logf("excessBlobGas: %v", *tc.fixture.json.Genesis.ExcessBlobGas)
+		t.Fatalf("excessBlobGas: %v", genesisBlock.ExcessBlobGas())
 	}
 	t1 := time.Now()
 

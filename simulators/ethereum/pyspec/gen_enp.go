@@ -15,23 +15,26 @@ var _ = (*engineNewPayloadUnmarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (e engineNewPayload) MarshalJSON() ([]byte, error) {
 	type engineNewPayload struct {
-		Payload             *engine.ExecutableData `json:"payload"`
-		Version             math.HexOrDecimal64    `json:"version"`
-		BlobVersionedHashes []common.Hash          `json:"blobVersionedHashes"`
+		Payload               *engine.ExecutableData `json:"executionPayload"`
+		BlobVersionedHashes   []common.Hash          `json:"expectedBlobVersionedHashes"`
+		Version               math.HexOrDecimal64    `json:"version"`
+		ParentBeaconBlockRoot *common.Hash           `json:"parentBeaconBlockRoot"`
 	}
 	var enc engineNewPayload
 	enc.Payload = e.Payload
-	enc.Version = math.HexOrDecimal64(e.Version)
 	enc.BlobVersionedHashes = e.BlobVersionedHashes
+	enc.Version = math.HexOrDecimal64(e.Version)
+	enc.ParentBeaconBlockRoot = e.ParentBeaconBlockRoot
 	return json.Marshal(&enc)
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (e *engineNewPayload) UnmarshalJSON(input []byte) error {
 	type engineNewPayload struct {
-		Payload             *engine.ExecutableData `json:"payload"`
-		Version             *math.HexOrDecimal64   `json:"version"`
-		BlobVersionedHashes []common.Hash          `json:"blobVersionedHashes"`
+		Payload               *engine.ExecutableData `json:"executionPayload"`
+		BlobVersionedHashes   []common.Hash          `json:"expectedBlobVersionedHashes"`
+		Version               *math.HexOrDecimal64   `json:"version"`
+		ParentBeaconBlockRoot *common.Hash           `json:"parentBeaconBlockRoot"`
 	}
 	var dec engineNewPayload
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -40,11 +43,14 @@ func (e *engineNewPayload) UnmarshalJSON(input []byte) error {
 	if dec.Payload != nil {
 		e.Payload = dec.Payload
 	}
+	if dec.BlobVersionedHashes != nil {
+		e.BlobVersionedHashes = dec.BlobVersionedHashes
+	}
 	if dec.Version != nil {
 		e.Version = uint64(*dec.Version)
 	}
-	if dec.BlobVersionedHashes != nil {
-		e.BlobVersionedHashes = dec.BlobVersionedHashes
+	if dec.ParentBeaconBlockRoot != nil {
+		e.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	}
 	return nil
 }
