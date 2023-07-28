@@ -20,15 +20,15 @@
       tag: master
 
 - client: go-ethereum
-  nametag: 4844-git
+  nametag: cancun-git
   dockerfile: git
   build_args:
-      github: MariusVanDerWijden/go-ethereum
-      tag: 4844-devnet-6
+      github: ethereum/go-ethereum
+      tag: master
 
 - client: nethermind
-  nametag: 4844-git
+  nametag: cancun-git
   dockerfile: git
   build_args:
       github: NethermindEth/nethermind
-      tag: feature/eip-4844-v6
+      tag: master

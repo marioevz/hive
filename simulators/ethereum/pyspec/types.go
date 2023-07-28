@@ -84,8 +84,8 @@ type blockHeader struct {
 	BaseFee            *big.Int         `json:"baseFeePerGas"`
 	Hash               common.Hash      `json:"hash"`
 	WithdrawalsRoot    common.Hash      `json:"withdrawalsRoot"`
-	DataGasUsed        *uint64          `json:"dataGasUsed"`
-	ExcessDataGas      *uint64          `json:"excessDataGas"`
+	BlobGasUsed        *uint64          `json:"blobGasUsed"`
+	ExcessBlobGas      *uint64          `json:"excessBlobGas"`
 }
 
 type blockHeaderUnmarshaling struct {
@@ -96,8 +96,8 @@ type blockHeaderUnmarshaling struct {
 	Timestamp     *math.HexOrDecimal256 `json:"timestamp"`
 	ExtraData     hexutil.Bytes         `json:"extraData"`
 	BaseFee       *math.HexOrDecimal256 `json:"baseFeePerGas"`
-	DataGasUsed   *math.HexOrDecimal64  `json:"dataGasUsed"`
-	ExcessDataGas *math.HexOrDecimal64  `json:"excessDataGas"`
+	BlobGasUsed   *math.HexOrDecimal64  `json:"blobGasUsed"`
+	ExcessBlobGas *math.HexOrDecimal64  `json:"excessBlobGas"`
 }
 
 type transaction struct {
@@ -117,7 +117,7 @@ type transaction struct {
 	V                    *big.Int          `json:"v"`
 	R                    *big.Int          `json:"r"`
 	S                    *big.Int          `json:"s"`
-	MaxFeePerDataGas     *big.Int          `json:"maxFeePerDataGas"`
+	MaxFeePerBlobGas     *big.Int          `json:"maxFeePerBlobGas"`
 	BlobVersionedHashes  []*common.Hash    `json:"blobVersionedHashes"`
 }
 
@@ -134,7 +134,7 @@ type transactionUnmarshaling struct {
 	V                    *math.HexOrDecimal256 `json:"v"`
 	R                    *math.HexOrDecimal256 `json:"r"`
 	S                    *math.HexOrDecimal256 `json:"s"`
-	MaxFeePerDataGas     *math.HexOrDecimal256 `json:"maxFeePerDataGas"`
+	MaxFeePerBlobGas     *math.HexOrDecimal256 `json:"maxFeePerBlobGas"`
 }
 
 type withdrawals struct {
@@ -151,9 +151,10 @@ type withdrawalsUnmarshaling struct {
 }
 
 type engineNewPayload struct {
-	Payload             *api.ExecutableData `json:"payload"`
-	Version             uint64              `json:"version"`
-	BlobVersionedHashes []common.Hash       `json:"blobVersionedHashes"`
+	Payload               *api.ExecutableData `json:"executionPayload"`
+	BlobVersionedHashes   []common.Hash       `json:"expectedBlobVersionedHashes"`
+	Version               uint64              `json:"version"`
+	ParentBeaconBlockRoot *common.Hash        `json:"parentBeaconBlockRoot"`
 }
 
 type engineNewPayloadUnmarshaling struct {
