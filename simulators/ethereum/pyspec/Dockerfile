@@ -25,7 +25,7 @@ COPY --from=builder /source/pyspec/pyspec .
 # RUN tar -xzvf fixtures-cancun.tar.gz
 # RUN mv fixtures /fixtures
 
-ADD ./pyspec/fixtures_4844 /fixtures
+ADD ./pyspec/fixtures_4844_4788 /fixtures
 
 # Point to executable and test fixtures.
 ENV TESTPATH /fixtures

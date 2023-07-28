@@ -136,7 +136,8 @@ func (tc *testcase) run(t *hivesim.T) {
 			context.Background(),
 			int(engineNewPayload.Version),
 			engineNewPayload.Payload,
-			engineNewPayload.BlobVersionedHashes,
+			&engineNewPayload.BlobVersionedHashes,
+			engineNewPayload.ParentBeaconRoot,
 		)
 		if plErr != nil {
 			if plException == plErr.Error() {
