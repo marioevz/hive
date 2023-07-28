@@ -1,33 +1,25 @@
 - client: besu
-  nametag: 4844-git
+  nametag: cancun-4844-4788-git
   dockerfile: git
   build_args:
       github: hyperledger/besu
-      tag: 4844-devnet-5b
-      # TODO: Add devnet-6 ready branch
-
-- client: erigon
-  nametag: 4844-git
-  dockerfile: git
-  build_args:
-      github: roberto-bayardo/erigon
-      tag: eip-4844
+      tag: master # TODO: add branch
 
 - client: ethereumjs
-  nametag: 4844-git
+  nametag: cancun-4844-4788-git
   build_args:
       baseimage: ethereumjs/ethereumjs-monorepo
-      tag: master
+      tag: master # TODO: add branch
 
 - client: go-ethereum
-  nametag: cancun-git
+  nametag: cancun-4844-4788-git
   dockerfile: git
   build_args:
       github: ethereum/go-ethereum
-      tag: master
+      tag: master # TODO: add branch
 
 - client: nethermind
-  nametag: cancun-git
+  nametag: cancun-4844-4788-git
   dockerfile: git
   build_args:
       github: NethermindEth/nethermind
