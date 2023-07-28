@@ -151,10 +151,10 @@ type withdrawalsUnmarshaling struct {
 }
 
 type engineNewPayload struct {
-	Payload               *api.ExecutableData `json:"executionPayload"`
-	BlobVersionedHashes   []common.Hash       `json:"expectedBlobVersionedHashes"`
-	Version               uint64              `json:"version"`
-	ParentBeaconBlockRoot *common.Hash        `json:"parentBeaconBlockRoot"`
+	Payload             *api.ExecutableData `json:"executionPayload"`
+	BlobVersionedHashes []common.Hash       `json:"expectedBlobVersionedHashes"`
+	ParentBeaconRoot    *common.Hash        `json:"parentBeaconBlockRoot"`
+	Version             uint64              `json:"version"`
 }
 
 type engineNewPayloadUnmarshaling struct {

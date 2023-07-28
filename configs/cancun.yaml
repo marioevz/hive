@@ -31,4 +31,4 @@
   dockerfile: git
   build_args:
       github: NethermindEth/nethermind
-      tag: master
+      tag: EIP-4788/BeaconStateRoot-in-EVM
