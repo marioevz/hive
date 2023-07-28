@@ -33,7 +33,7 @@ func (t transaction) MarshalJSON() ([]byte, error) {
 		V                    *math.HexOrDecimal256 `json:"v"`
 		R                    *math.HexOrDecimal256 `json:"r"`
 		S                    *math.HexOrDecimal256 `json:"s"`
-		MaxFeePerDataGas     *math.HexOrDecimal256 `json:"maxFeePerDataGas"`
+		MaxFeePerBlobGas     *math.HexOrDecimal256 `json:"maxFeePerBlobGas"`
 		BlobVersionedHashes  []*common.Hash        `json:"blobVersionedHashes"`
 	}
 	var enc transaction
@@ -53,7 +53,7 @@ func (t transaction) MarshalJSON() ([]byte, error) {
 	enc.V = (*math.HexOrDecimal256)(t.V)
 	enc.R = (*math.HexOrDecimal256)(t.R)
 	enc.S = (*math.HexOrDecimal256)(t.S)
-	enc.MaxFeePerDataGas = (*math.HexOrDecimal256)(t.MaxFeePerDataGas)
+	enc.MaxFeePerBlobGas = (*math.HexOrDecimal256)(t.MaxFeePerBlobGas)
 	enc.BlobVersionedHashes = t.BlobVersionedHashes
 	return json.Marshal(&enc)
 }
@@ -77,7 +77,7 @@ func (t *transaction) UnmarshalJSON(input []byte) error {
 		V                    *math.HexOrDecimal256 `json:"v"`
 		R                    *math.HexOrDecimal256 `json:"r"`
 		S                    *math.HexOrDecimal256 `json:"s"`
-		MaxFeePerDataGas     *math.HexOrDecimal256 `json:"maxFeePerDataGas"`
+		MaxFeePerBlobGas     *math.HexOrDecimal256 `json:"maxFeePerBlobGas"`
 		BlobVersionedHashes  []*common.Hash        `json:"blobVersionedHashes"`
 	}
 	var dec transaction
@@ -132,8 +132,8 @@ func (t *transaction) UnmarshalJSON(input []byte) error {
 	if dec.S != nil {
 		t.S = (*big.Int)(dec.S)
 	}
-	if dec.MaxFeePerDataGas != nil {
-		t.MaxFeePerDataGas = (*big.Int)(dec.MaxFeePerDataGas)
+	if dec.MaxFeePerBlobGas != nil {
+		t.MaxFeePerBlobGas = (*big.Int)(dec.MaxFeePerBlobGas)
 	}
 	if dec.BlobVersionedHashes != nil {
 		t.BlobVersionedHashes = dec.BlobVersionedHashes
