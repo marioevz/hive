@@ -15,8 +15,10 @@
   nametag: cancun-4844-4788-git
   dockerfile: git
   build_args:
-      github: ethereum/go-ethereum
-      tag: master # TODO: add branch
+      # github: lightclient/go-ethereum
+      # tag: devnet-8
+      github: spencer-tb/go-ethereum
+      tag: 4788-beacon-root-contract-fix
 
 - client: nethermind
   nametag: cancun-4844-4788-git
