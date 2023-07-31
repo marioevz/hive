@@ -49,7 +49,7 @@ set -e
 besu=/opt/besu/bin/besu
 
 # See https://github.com/hyperledger/besu/issues/1464
-export BESU_OPTS="-Dsecp256k1.randomize=false"
+export BESU_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005 -Dsecp256k1.randomize=false"
 
 # Configure logging.
 LOG=info
