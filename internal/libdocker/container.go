@@ -84,6 +84,9 @@ func (b *ContainerBackend) CreateContainer(ctx context.Context, imageName string
 			Image: imageName,
 			Env:   vars,
 		},
+		HostConfig: &docker.HostConfig{
+			PublishAllPorts: true,
+		},
 	}
 
 	if opt.Input != nil {
