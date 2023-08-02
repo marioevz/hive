@@ -1,7 +1,7 @@
 {
     "000-fork=ShanghaiToCancunAtTime15k-no_blob_tx": {
         "_info": {
-            "filling-transition-tool": "evm version 1.12.1-unstable-7f86fd5b-20230731",
+            "filling-transition-tool": "evm version 1.12.1-unstable-dc9e61da-20230801",
             "reference-spec": "https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md",
             "reference-spec-version": "f0eb6a364aaf5ccb43516fa2c269a54fb881ecfd"
         },
@@ -90,7 +90,7 @@
     },
     "001-fork=ShanghaiToCancunAtTime15k-one_blob_tx": {
         "_info": {
-            "filling-transition-tool": "evm version 1.12.1-unstable-7f86fd5b-20230731",
+            "filling-transition-tool": "evm version 1.12.1-unstable-dc9e61da-20230801",
             "reference-spec": "https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4844.md",
             "reference-spec-version": "f0eb6a364aaf5ccb43516fa2c269a54fb881ecfd"
         },
