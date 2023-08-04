@@ -3,3 +3,6 @@ workspace
 .idea/
 # build output
 /hive
+# python
+.venv
+*.pyc
