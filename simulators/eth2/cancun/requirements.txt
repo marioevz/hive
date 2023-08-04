@@ -1,0 +1,11 @@
+certifi==2023.7.22
+charset-normalizer==3.2.0
+idna==3.4
+mypy==1.4.1
+mypy-extensions==1.0.0
+requests==2.31.0
+tomli==2.0.1
+types-requests==2.31.0.2
+types-urllib3==1.26.25.14
+typing_extensions==4.7.1
+urllib3==2.0.4
