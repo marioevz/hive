@@ -1,15 +1,15 @@
-### Build EthereumJS From Git:
+### Build Ethereumjs Locally:
+### Requires a copy of ethereumjs-monorepo/ -> hive/clients/ethereumjs/
 
-FROM node:18-alpine as build
+FROM node:18-alpine
 
-ARG github=ethereumjs/ethereumjs-monorepo
-ARG tag=master
+RUN apk update && apk add --no-cache bash git jq curl python3 gcc make g++ \
+    && rm -rf /var/cache/apk/*
 
-RUN echo "Cloning: $github - $tag" \
-    && apk update && apk add --no-cache bash git jq curl python3 gcc make g++ \
-    && rm -rf /var/cache/apk/* \
-    && git clone --depth 1 -b $tag https://github.com/$github \
-    && cd ethereumjs-monorepo && npm i
+# Default local client path: clients/ethereumjs/<ethereumjs-monorepo>
+ARG local_path=ethereumjs-monorepo
+COPY $local_path ethereumjs-monorepo
+RUN cd ethereumjs-monorepo && npm i
 
 # Create version.txt
 RUN cd ethereumjs-monorepo/packages/client && npm ethereumjs --version > /version.txt
