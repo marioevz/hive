@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from hive.simulation import Simulation, TestResult
+from hive.simulation import Simulation
+from hive.tests import TestResult
 
 print("Hello, World!")
 
@@ -17,7 +18,7 @@ assert suite is not None
 t = suite.start_test("my_test", "my test description")
 assert t is not None
 
-t.start_client(client_type=clients[0], parameters={}, init_files={"genesis.json": "genesis.json"})
+t.start_client(client_type=clients[0], parameters={}, files={"genesis.json": "genesis.json"})
 
 t.end(result=TestResult(test_pass=True, details="some details"))
 suite.end()
