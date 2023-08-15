@@ -1,8 +1,13 @@
 certifi==2023.7.22
 charset-normalizer==3.2.0
+exceptiongroup==1.1.2
+hive.py @ git+https://github.com/marioevz/hive.py.git@55e1a36f564de88754119ef5f00ef829fdffaa1f
 idna==3.4
+iniconfig==2.0.0
 mypy==1.4.1
 mypy-extensions==1.0.0
+packaging==23.1
+pluggy==1.2.0
 requests==2.31.0
 tomli==2.0.1
 types-requests==2.31.0.2

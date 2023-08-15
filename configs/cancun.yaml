@@ -31,3 +31,13 @@
   build_args:
       github: ledgerwatch/erigon
       tag: devel
+
+- client: lighthouse-bn
+  nametag: deneb
+  build_args:
+      tag: deneb-modern
+
+- client: lighthouse-vc
+  nametag: deneb
+  build_args:
+      tag: deneb-modern
