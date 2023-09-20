@@ -52,7 +52,7 @@ type Testnet struct {
 	// Consensus chain configuration
 	spec *common.Spec
 	// Execution chain configuration and genesis info
-	eth1Genesis *execution_config.ExecutionGenesis
+	executionGenesis *execution_config.ExecutionGenesis
 	// Consensus genesis state
 	eth2GenesisState common.BeaconState
 
@@ -135,7 +135,7 @@ func (t *Testnet) GenesisValidatorsRoot() common.Root {
 }
 
 func (t *Testnet) ExecutionGenesis() *core.Genesis {
-	return t.eth1Genesis.Genesis
+	return t.executionGenesis.Genesis
 }
 
 func StartTestnet(
@@ -144,8 +144,11 @@ func StartTestnet(
 	env *Environment,
 	config *Config,
 ) *Testnet {
+	prep, err := prepareTestnet(env, config)
+	if err != nil {
+		t.Fatalf("FAIL: Unable to prepare testnet: %v", err)
+	}
 	var (
-		prep        = prepareTestnet(t, env, config)
 		testnet     = prep.createTestnet(t)
 		genesisTime = testnet.GenesisTimeUnix()
 	)
@@ -203,13 +206,13 @@ func StartTestnet(
 		}
 		if node.ExecutionClientTTD != nil {
 			executionTTD = node.ExecutionClientTTD.Int64()
-		} else if testnet.eth1Genesis.Genesis.Config.TerminalTotalDifficulty != nil {
-			executionTTD = testnet.eth1Genesis.Genesis.Config.TerminalTotalDifficulty.Int64()
+		} else if testnet.executionGenesis.Genesis.Config.TerminalTotalDifficulty != nil {
+			executionTTD = testnet.executionGenesis.Genesis.Config.TerminalTotalDifficulty.Int64()
 		}
 		if node.BeaconNodeTTD != nil {
 			beaconTTD = node.BeaconNodeTTD.Int64()
-		} else if testnet.eth1Genesis.Genesis.Config.TerminalTotalDifficulty != nil {
-			beaconTTD = testnet.eth1Genesis.Genesis.Config.TerminalTotalDifficulty.Int64()
+		} else if testnet.executionGenesis.Genesis.Config.TerminalTotalDifficulty != nil {
+			beaconTTD = testnet.executionGenesis.Genesis.Config.TerminalTotalDifficulty.Int64()
 		}
 
 		// Prepare the client objects with all the information necessary to
@@ -385,7 +388,7 @@ func (t *Testnet) WaitForFork(ctx context.Context, fork string) error {
 					}
 
 					execution := ethcommon.Hash{}
-					if executionPayload, err := versionedBlock.ExecutionPayload(); err == nil {
+					if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err == nil {
 						execution = executionPayload.BlockHash
 					}
 
@@ -491,7 +494,7 @@ func (t *Testnet) WaitForFinality(ctx context.Context) (
 						return
 					}
 					execution := ethcommon.Hash{}
-					if executionPayload, err := versionedBlock.ExecutionPayload(); err == nil {
+					if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err == nil {
 						execution = executionPayload.BlockHash
 					}
 
@@ -616,7 +619,7 @@ func (t *Testnet) WaitForExecutionFinality(
 					}
 
 					execution := ethcommon.Hash{}
-					if exeuctionPayload, err := headBlock.ExecutionPayload(); err == nil {
+					if exeuctionPayload, _, _, err := headBlock.ExecutionPayload(); err == nil {
 						execution = exeuctionPayload.BlockHash
 					}
 
@@ -633,7 +636,7 @@ func (t *Testnet) WaitForExecutionFinality(
 							return
 						} else {
 							finalizedFork = finalizedBlock.Version
-							if exeuctionPayload, err := finalizedBlock.ExecutionPayload(); err == nil {
+							if exeuctionPayload, _, _, err := finalizedBlock.ExecutionPayload(); err == nil {
 								finalizedExecution = exeuctionPayload.BlockHash
 							}
 						}
@@ -828,7 +831,7 @@ func (t *Testnet) WaitForExecutionPayload(
 				// Check if TTD has been reached
 				if td, err := executionClient.TotalDifficultyByNumber(ctx, nil); err == nil {
 					if td.Cmp(
-						t.eth1Genesis.Genesis.Config.TerminalTotalDifficulty,
+						t.executionGenesis.Genesis.Config.TerminalTotalDifficulty,
 					) >= 0 {
 						ttdReached = true
 					} else {
@@ -877,7 +880,7 @@ func (t *Testnet) WaitForExecutionPayload(
 					}
 
 					executionHash := ethcommon.Hash{}
-					if executionPayload, err := versionedBlock.ExecutionPayload(); err == nil {
+					if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err == nil {
 						executionHash = executionPayload.BlockHash
 					}
 
