@@ -151,7 +151,7 @@ func (t *Testnet) VerifyExecutionPayloadIsCanonical(
 		)
 	}
 
-	payload, err := versionedBlock.ExecutionPayload()
+	payload, _, _, err := versionedBlock.ExecutionPayload()
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func (t *Testnet) VerifyExecutionPayloadHashInclusionNode(
 		if err != nil {
 			continue
 		}
-		if executionPayload, err := versionedBlock.ExecutionPayload(); err != nil {
+		if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err != nil {
 			// Block can't contain an executable payload
 			break
 		} else if bytes.Equal(executionPayload.BlockHash[:], hash[:]) {
@@ -323,7 +323,7 @@ func (t *Testnet) VerifyELBlockLabels(parentCtx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if executionPayload, err := versionedBlock.ExecutionPayload(); err != nil {
+			if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err != nil {
 				// Get the el block and compare
 				h, err := el.HeaderByLabel(parentCtx, label)
 				if err != nil {
