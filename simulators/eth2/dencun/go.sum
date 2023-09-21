@@ -249,12 +249,10 @@ github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/marioevz/eth-clients v0.0.0-20230823175101-fdc85382188d h1:X5kDuhc/KJmftpz4lr1xGLQeLMsXScF0ui77rvyclto=
 github.com/marioevz/eth-clients v0.0.0-20230823175101-fdc85382188d/go.mod h1:LZb4HPhmomFs5C3Rxj57X83yp3qzQHgB/xDAsvrFmDw=
+github.com/marioevz/eth-clients v0.0.0-20230915171945-93cb0f6bedb8 h1:xJzvZnWVBaGsSJjF3QMM8w3GHY86qn7LqKFqE0V+Hcg=
+github.com/marioevz/eth-clients v0.0.0-20230915171945-93cb0f6bedb8/go.mod h1:jgnlxZk0hbrIO1Mq3AzcgnfDzf1swvm1nGd3VglOzDk=
 github.com/marioevz/eth2api v0.0.0-20230823170424-c49aeeefbc40 h1:XjtFopxKQTfRvzPiVkWATIxmTzN+i068THS3r9KLoaA=
 github.com/marioevz/eth2api v0.0.0-20230823170424-c49aeeefbc40/go.mod h1:hcwWCT4sF1X7KsMZ535MvDZVk5M20Uyj+x2LARZjQsM=
-github.com/marioevz/mock-builder v1.0.1-0.20230828202449-2f892b67f32d h1:E8UvIcLOfZJQ3TlFbmoL1XDNRO8p79ORrtwVmeJyE78=
-github.com/marioevz/mock-builder v1.0.1-0.20230828202449-2f892b67f32d/go.mod h1:GJQNlIeJc1UsJuJnpoHLnq3Afi820+9bod8jsmilH90=
-github.com/marioevz/mock-builder v1.1.0 h1:2FvFGN+irtiMzfMfC5c3EtWIQ5oXu8yQpyHR8yfTdFA=
-github.com/marioevz/mock-builder v1.1.0/go.mod h1:SNZ7dv5aXLJQZ88JNmARdXz9N8HEbU5KVyitRuXnPXY=
 github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d h1:MKDrztpuiYtlG8MpW7wES2f37bEevR5F1ziR2x8VzfA=
 github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d/go.mod h1:SNZ7dv5aXLJQZ88JNmARdXz9N8HEbU5KVyitRuXnPXY=
 github.com/marioevz/zrnt v0.26.2-0.20230914180617-c828a93a4d2a h1:fRrNshktx1L7UDSaBBokm/sZyMGVCMxX8gvh0g8yn1Y=
