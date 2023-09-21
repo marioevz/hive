@@ -4,9 +4,6 @@ use (
 	./common
 	./dencun
 	./engine
-	./eth-clients
-	./mock-builder
 	./testnet
 	./withdrawals
-	./zrnt
 )
