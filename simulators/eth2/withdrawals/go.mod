@@ -88,4 +88,4 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230823170424-c49aeeefbc40
+replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033
