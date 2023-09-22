@@ -385,3 +385,9 @@ func (t *Testnet) VerifyELHeads(
 	}
 	return nil
 }
+
+func (t *Testnet) VerifyBlobs(
+	parentCtx context.Context,
+) error {
+	return nil
+}

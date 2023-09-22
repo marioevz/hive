@@ -40,6 +40,35 @@ var tests = []TestSpec{
 		`,
 		DenebGenesis: true,
 		GenesisExecutionWithdrawalCredentialsShares: 1,
+		WaitForFinality: true,
+	},
+}
+
+var syncTests = []TestSpec{
+	SyncDenebTestSpec{
+		BaseDencunTestSpec: BaseDencunTestSpec{
+			Name: "test-sync-sanity-from-capella",
+			Description: `
+			Test syncing of the beacon chain by a secondary non-validating client, sync from capella.
+			`,
+			NodeCount: 3,
+			// All validators start with BLS withdrawal credentials
+			GenesisExecutionWithdrawalCredentialsShares: 0,
+		},
+		EpochsToSync: 1,
+	},
+	SyncDenebTestSpec{
+		BaseDencunTestSpec: BaseDencunTestSpec{
+			Name: "test-sync-sanity-from-deneb",
+			Description: `
+			Test syncing of the beacon chain by a secondary non-validating client, sync from deneb.
+			`,
+			NodeCount: 3,
+			// All validators start with BLS withdrawal credentials
+			GenesisExecutionWithdrawalCredentialsShares: 0,
+			DenebGenesis: true,
+		},
+		EpochsToSync: 1,
 	},
 }
 
@@ -141,6 +170,10 @@ func main() {
 		Name:        "eth2-deneb",
 		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Cancun+Deneb.`,
 	}
+	syncSuite := hivesim.Suite{
+		Name:        "eth2-deneb-sync",
+		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Cancun+Deneb and test syncing of the beacon chain.`,
+	}
 	builderSuite := hivesim.Suite{
 		Name:        "eth2-deneb-builder",
 		Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet and builder API for Cancun+Deneb.`,
@@ -148,10 +181,12 @@ func main() {
 
 	// Add all tests to the suites
 	addAllTests(&denebSuite, c, tests)
+	addAllTests(&syncSuite, c, syncTests)
 	addAllTests(&builderSuite, c, builderTests)
 
 	// Mark suites for execution
 	hivesim.MustRunSuite(sim, denebSuite)
+	hivesim.MustRunSuite(sim, syncSuite)
 	hivesim.MustRunSuite(sim, builderSuite)
 }
 
