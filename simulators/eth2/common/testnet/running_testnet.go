@@ -270,9 +270,12 @@ func StartTestnet(
 		nodeClient.Verification = node.TestVerificationNode
 		// Start the node clients if specified so
 		if !node.DisableStartup {
+			t.Logf("Starting node %d", nodeIndex)
 			if err := nodeClient.Start(); err != nil {
 				t.Fatalf("FAIL: Unable to start node %d: %v", nodeIndex, err)
 			}
+		} else {
+			t.Logf("Node %d startup disabled, skipping", nodeIndex)
 		}
 	}
 
@@ -546,6 +549,127 @@ func (t *Testnet) WaitForFinality(ctx context.Context) (
 	}
 }
 
+// WaitForSync blocks until all beacon clients converge to the same head.
+func (t *Testnet) WaitForSync(ctx context.Context) (
+	tree.Root, error,
+) {
+	var (
+		genesis      = t.GenesisTimeUnix()
+		slotDuration = time.Duration(t.spec.SECONDS_PER_SLOT) * time.Second
+		timer        = time.NewTicker(slotDuration)
+		runningNodes = t.VerificationNodes().Running()
+		results      = makeResults(runningNodes, t.maxConsecutiveErrorsOnWaits)
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return tree.Root{}, ctx.Err()
+		case tim := <-timer.C:
+			// start polling after first slot of genesis
+			if tim.Before(genesis.Add(slotDuration)) {
+				t.Logf("Time till genesis: %s", genesis.Sub(tim))
+				continue
+			}
+
+			// new slot, log and check status of all beacon nodes
+			var (
+				wg        sync.WaitGroup
+				clockSlot = t.spec.TimeToSlot(
+					common.Timestamp(time.Now().Unix()),
+					t.GenesisTime(),
+				)
+				heads = make(chan tree.Root, len(runningNodes))
+			)
+			results.Clear()
+
+			for i, n := range runningNodes {
+				wg.Add(1)
+				go func(ctx context.Context, n *node.Node, r *result) {
+					defer wg.Done()
+
+					b := n.BeaconClient
+
+					checkpoints, err := b.BlockFinalityCheckpoints(
+						ctx,
+						eth2api.BlockHead,
+					)
+					if err != nil {
+						r.err = errors.Wrap(
+							err,
+							"failed to poll finality checkpoint",
+						)
+						return
+					}
+
+					versionedBlock, err := b.BlockV2(
+						ctx,
+						eth2api.BlockHead,
+					)
+					if err != nil {
+						r.err = errors.Wrap(err, "failed to retrieve block")
+						return
+					}
+					heads <- versionedBlock.Root()
+
+					execution := ethcommon.Hash{}
+					if executionPayload, _, _, err := versionedBlock.ExecutionPayload(); err == nil {
+						execution = executionPayload.BlockHash
+					}
+
+					slot := versionedBlock.Slot()
+					health, _ := GetHealth(ctx, b, t.spec, slot)
+
+					r.msg = fmt.Sprintf(
+						"fork=%s, clock_slot=%d, slot=%d, head=%s, "+
+							"health=%.2f, exec_payload=%s, justified=%s, "+
+							"finalized=%s",
+						versionedBlock.Version,
+						clockSlot,
+						slot,
+						utils.Shorten(versionedBlock.Root().String()),
+						health,
+						utils.Shorten(execution.String()),
+						utils.Shorten(checkpoints.CurrentJustified.String()),
+						utils.Shorten(checkpoints.Finalized.String()),
+					)
+
+					if (checkpoints.Finalized != common.Checkpoint{}) {
+						r.done = true
+						r.result = checkpoints.Finalized
+					}
+				}(ctx, n, results[i])
+			}
+			wg.Wait()
+
+			if err := results.CheckError(); err != nil {
+				return tree.Root{}, err
+			}
+			results.PrintMessages(t.Logf)
+
+			// Check if all heads are the same
+			close(heads)
+			var (
+				head tree.Root
+				ok   bool = true
+			)
+			for h := range heads {
+				if head == EMPTY_TREE_ROOT {
+					head = h
+					continue
+				}
+				if !bytes.Equal(head[:], h[:]) {
+					ok = false
+					break
+				}
+			}
+			if ok && head != EMPTY_TREE_ROOT {
+				return head, nil
+			}
+		}
+	}
+}
+
 // WaitForExecutionFinality blocks until a beacon client reaches finality
 // and the finality checkpoint contains an execution payload,
 // or timeoutSlots have passed, whichever happens first.
@@ -734,13 +858,13 @@ func (t *Testnet) WaitForCurrentEpochFinalization(
 
 					b := n.BeaconClient
 
-					headInfo, err := b.BlockHeader(ctx, eth2api.BlockHead)
+					headInfo, err := b.BlockV2(ctx, eth2api.BlockHead)
 					if err != nil {
 						r.err = errors.Wrap(err, "failed to poll head")
 						return
 					}
 
-					slot := headInfo.Header.Message.Slot
+					slot := headInfo.Slot()
 					if clockSlot > slot &&
 						(clockSlot-slot) >= t.spec.SLOTS_PER_EPOCH {
 						r.fatal = fmt.Errorf(
@@ -764,11 +888,12 @@ func (t *Testnet) WaitForCurrentEpochFinalization(
 					}
 
 					r.msg = fmt.Sprintf(
-						"clock_slot=%d, slot=%d, head=%s justified=%s, "+
+						"fork=%s, clock_slot=%d, slot=%d, head=%s justified=%s, "+
 							"finalized=%s, epoch_to_finalize=%d",
+						headInfo.Version,
 						clockSlot,
 						slot,
-						utils.Shorten(headInfo.Root.String()),
+						utils.Shorten(headInfo.Root().String()),
 						utils.Shorten(checkpoints.CurrentJustified.String()),
 						utils.Shorten(checkpoints.Finalized.String()),
 						epochToBeFinalized,
