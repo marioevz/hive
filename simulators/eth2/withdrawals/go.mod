@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/ethereum/hive/simulators/eth2/common v0.0.0-20230316220410-1364352c32a6
-	github.com/marioevz/eth-clients v0.0.0-20230823175101-fdc85382188d
+	github.com/marioevz/eth-clients v0.0.0-20230922221241-a207c13bf74f
 	github.com/marioevz/mock-builder v0.0.0-20230501225822-df434a88e375
 	github.com/pkg/errors v0.9.1
 	github.com/protolambda/eth2api v0.0.0-20230316214135-5f8afbd6d05d
@@ -41,7 +41,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/pebble v0.0.0-20230404150825-93eff0a72e22 // indirect
+	github.com/cockroachdb/pebble v0.0.0-20230821143352-55b44ac08de8 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/deckarep/golang-set/v2 v2.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
@@ -83,7 +83,7 @@ require (
 	github.com/wealdtech/go-eth2-util v1.8.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
+	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )

@@ -4,6 +4,7 @@ use (
 	./common
 	./dencun
 	./engine
+	./eth-clients
 	./testnet
 	./withdrawals
 )
