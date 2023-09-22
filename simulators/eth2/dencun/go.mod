@@ -96,4 +96,4 @@ require (
 
 replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230823170424-c49aeeefbc40
 
-replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230914180617-c828a93a4d2a
+replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230922170744-1bd341bc7f0f
