@@ -135,7 +135,7 @@ func (ts BaseDencunTestSpec) Execute(
 	}
 	nonWithdrawableValidators := allValidators.NonWithdrawable()
 	if len(nonWithdrawableValidators) > 0 {
-		beaconClients := testnet.BeaconClients()
+		beaconClients := testnet.BeaconClients().Running()
 		for i := 0; i < len(nonWithdrawableValidators); i++ {
 			b := beaconClients[i%len(beaconClients)]
 			v := nonWithdrawableValidators[i]
@@ -387,4 +387,45 @@ func (ts BuilderDenebTestSpec) Execute(
 	t.Logf(
 		"INFO: Validated all signatures of beacon blocks received by builders",
 	)
+}
+
+// Sync testnet.
+func (ts SyncDenebTestSpec) Execute(
+	t *hivesim.T,
+	ctx context.Context,
+	testnet *tn.Testnet,
+	env *tn.Environment,
+	config *tn.Config,
+	n []clients.NodeDefinition,
+) {
+	// Run the base test spec execute function, this sends blobs and constructs the chain
+	ts.BaseDencunTestSpec.Execute(t, ctx, testnet, env, config, n)
+
+	// Wait the specified number of epochs to sync before starting the second client
+	t.Logf("INFO: Waiting %d epochs for running clients to build a chain for last client to sync", ts.EpochsToSync)
+	testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsToSync)*testnet.Spec().SLOTS_PER_EPOCH)
+
+	t.Logf("INFO: Starting secondary clients")
+	// Start the other clients
+	for _, n := range testnet.Nodes {
+		if !n.IsRunning() {
+			if err := n.Start(); err != nil {
+				t.Fatalf("FAIL: error starting node %s: %v", n.ClientNames(), err)
+			}
+		}
+	}
+
+	// Wait for all other clients to sync with a timeout of 1 epoch
+	syncCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 1)
+	defer cancel()
+	if h, err := testnet.WaitForSync(syncCtx); err != nil {
+		t.Fatalf("FAIL: error waiting for sync: %v", err)
+	} else {
+		t.Logf("INFO: all clients synced at head %s", h)
+	}
+
+	// Verify all clients agree on blobs for each slot
+	if err := testnet.VerifyBlobs(ctx); err != nil {
+		t.Fatalf("FAIL: error verifying blobs: %v", err)
+	}
 }

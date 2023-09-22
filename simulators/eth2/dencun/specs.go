@@ -71,6 +71,10 @@ var (
 	)
 	CodeContract = common.Hex2Bytes("0x328043558043600080a250")
 
+	BeaconRootContractAddress = common.HexToAddress(
+		"0xbEAC020008aFF7331c0A389CB2AAb67597567d7a",
+	)
+
 	GasPrice    = big.NewInt(30 * params.GWei)
 	GasTipPrice = big.NewInt(1 * params.GWei)
 
@@ -277,6 +281,28 @@ func (ts BuilderDenebTestSpec) GetTestnetConfig(
 			mock_builder.WithInvalidBuilderBidVersionAtEpoch(denebEpoch),
 		)
 	}
+
+	return tc
+}
+
+type SyncDenebTestSpec struct {
+	BaseDencunTestSpec
+
+	EpochsToSync beacon.Epoch
+}
+
+func (ts SyncDenebTestSpec) GetTestnetConfig(
+	allNodeDefinitions clients.NodeDefinitions,
+) *testnet.Config {
+	// By default we only have one validating client, and the other clients must sync to it
+	if ts.BaseDencunTestSpec.ValidatingNodeCount == 0 {
+		ts.BaseDencunTestSpec.ValidatingNodeCount = ts.BaseDencunTestSpec.NodeCount - 1
+	}
+
+	tc := ts.BaseDencunTestSpec.GetTestnetConfig(allNodeDefinitions)
+
+	// We disable the start of the last node
+	tc.NodeDefinitions[len(tc.NodeDefinitions)-1].DisableStartup = true
 
 	return tc
 }
