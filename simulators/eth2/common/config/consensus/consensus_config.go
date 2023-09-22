@@ -128,12 +128,12 @@ func BuildSpec(
 			return nil, fmt.Errorf("VersionConfig was not configured for %s", currentConfig.ForkName)
 		}
 		currentConfig.VersionConfig[3] = 0x0a
-		fmt.Printf("Fork %s version %x", currentConfig.ForkName, currentConfig.VersionConfig)
+		fmt.Printf("Fork %s version %x\n", currentConfig.ForkName, *currentConfig.VersionConfig)
 
 		// Adjust epoch to the fork configuration if it is set
 		if currentConfig.EpochConfig != nil && currentConfig.ForkConfig != nil {
 			*currentConfig.EpochConfig = common.Epoch(currentConfig.ForkConfig.Uint64())
-			fmt.Printf("Fork %s at epoch %d", currentConfig.ForkName, currentConfig.ForkConfig.Uint64())
+			fmt.Printf("Fork %s at epoch %d\n", currentConfig.ForkName, currentConfig.ForkConfig.Uint64())
 		}
 	}
 
