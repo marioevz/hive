@@ -83,8 +83,7 @@ func prepareTestnet(
 	env *Environment,
 	config *Config,
 ) (*PreparedTestnet, error) {
-	executionGenesisTime := common.Timestamp(time.Now().Unix())
-	beaconGenesisTime := executionGenesisTime + 30
+	genesisTime := common.Timestamp(time.Now().Unix()) + 30
 
 	// Sanitize configuration according to the clients used
 	if err := config.FillDefaults(); err != nil {
@@ -100,7 +99,7 @@ func prepareTestnet(
 	// Generate genesis for execution clients
 	chainConfig, err := el.BuildChainConfig(
 		config.TerminalTotalDifficulty,
-		uint64(beaconGenesisTime),
+		uint64(genesisTime),
 		config.SlotsPerEpoch.Uint64(),
 		config.SlotTime.Uint64(),
 		config.ForkConfig,
@@ -110,7 +109,7 @@ func prepareTestnet(
 	}
 
 	executionGenesis, err := el.BuildExecutionGenesis(
-		uint64(executionGenesisTime),
+		uint64(genesisTime),
 		config.Eth1Consensus,
 		chainConfig,
 		config.GenesisExecutionAccounts,
@@ -196,7 +195,7 @@ func prepareTestnet(
 	state, err := cl_genesis.BuildBeaconState(
 		spec,
 		executionGenesis.Block,
-		beaconGenesisTime,
+		genesisTime,
 		env.Keys,
 	)
 	if err != nil {
