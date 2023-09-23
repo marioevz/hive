@@ -1,4 +1,4 @@
-package main
+package suite_builder
 
 import (
 	"bytes"
@@ -6,103 +6,25 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/hive/hivesim"
-	mock_builder "github.com/marioevz/mock-builder/mock"
-
-	"github.com/ethereum/hive/simulators/eth2/common/clients"
-	beacon_verification "github.com/ethereum/hive/simulators/eth2/common/spoofing/beacon"
 	tn "github.com/ethereum/hive/simulators/eth2/common/testnet"
-	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
-	"github.com/ethereum/hive/simulators/ethereum/engine/helper"
-	"github.com/protolambda/eth2api"
+	mock_builder "github.com/marioevz/mock-builder/mock"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-var Deneb string = "deneb"
-
-// Generic Deneb test routine, capable of running most of the test
-// scenarios.
-func (ts BaseDencunTestSpec) Execute(
+// Builder testnet.
+func (ts BuilderTestSpec) ExecutePostFork(
 	t *hivesim.T,
 	ctx context.Context,
 	testnet *tn.Testnet,
 	env *tn.Environment,
 	config *tn.Config,
-	n []clients.NodeDefinition,
 ) {
-	var (
-		normalTxAccounts = globals.TestAccounts[:len(globals.TestAccounts)/2]
-		blobTxAccounts   = globals.TestAccounts[len(globals.TestAccounts)/2:]
-		err              error
-	)
-
-	// Setup the transaction spammers, both normal and blob transactions
-	var (
-		normalTxSpammer = TransactionSpammer{
-			T:                        t,
-			ExecutionClients:         testnet.ExecutionClients().Running(),
-			Accounts:                 normalTxAccounts,
-			TransactionType:          helper.DynamicFeeTxOnly,
-			TransactionsPerIteration: 40,
-			SecondsBetweenIterations: int(testnet.Spec().SECONDS_PER_SLOT),
-		}
-		blobTxSpammer = TransactionSpammer{
-			T:                        t,
-			ExecutionClients:         testnet.ExecutionClients().Running(),
-			Accounts:                 blobTxAccounts,
-			TransactionType:          helper.BlobTxOnly,
-			TransactionsPerIteration: 2,
-			SecondsBetweenIterations: int(testnet.Spec().SECONDS_PER_SLOT),
-		}
-	)
-
-	// Start sending normal transactions from dedicated accounts
-	go normalTxSpammer.Run(ctx)
-
-	// Add verification of Beacon->Execution Engine API calls to the proxies
-	chainconfig := testnet.ExecutionGenesis().Config
-	// NewPayloadV2 expires at CancunTime: if a client sends a payload with
-	// a timestamp greater than CancunTime, and it's using NewPayloadV2, it
-	// must result in test failure.
-	newPayloadV2ExpireVerifier := beacon_verification.NewEngineMaxTimestampVerifier(
-		t,
-		beacon_verification.EngineNewPayloadV2,
-		*chainconfig.CancunTime,
-	)
-	// ForkchoiceUpdatedV2 expires at CancunTime: if a client sends a payload with
-	// a timestamp greater than CancunTime, and it's using ForkchoiceUpdatedV2, it
-	// must result in test failure.
-	forkchoiceUpdatedV2ExpireVerifier := beacon_verification.NewEngineMaxTimestampVerifier(
-		t,
-		beacon_verification.EngineForkchoiceUpdatedV2,
-		*chainconfig.CancunTime,
-	)
-	for _, e := range testnet.ExecutionClients() {
-		newPayloadV2ExpireVerifier.AddToProxy(e.Proxy())
-		forkchoiceUpdatedV2ExpireVerifier.AddToProxy(e.Proxy())
-	}
-
-	// Wait for beacon chain genesis to happen
-	testnet.WaitForGenesis(ctx)
-
-	// Wait for Deneb
-	if config.DenebForkEpoch.Uint64() > 0 {
-		slotsUntilDeneb := beacon.Slot(
-			config.DenebForkEpoch.Uint64(),
-		)*testnet.Spec().SLOTS_PER_EPOCH + 4
-		timeoutCtx, cancel := testnet.Spec().SlotTimeoutContext(ctx, slotsUntilDeneb)
-		defer cancel()
-		if err = testnet.WaitForFork(timeoutCtx, Deneb); err != nil {
-			t.Fatalf("FAIL: error waiting for deneb: %v", err)
-		}
-	}
-
-	// Start sending blob transactions from dedicated accounts
-	go blobTxSpammer.Run(ctx)
+	// Run the base test spec execute function
+	ts.BaseTestSpec.ExecutePostFork(t, ctx, testnet, env, config)
 
 	// Check that the builder was working properly until now
-	if config.EnableBuilders {
+	if !ts.DenebGenesis {
 		for i, b := range testnet.BeaconClients().Running() {
 			builder, ok := b.Builder.(*mock_builder.MockBuilder)
 			if !ok {
@@ -123,77 +45,17 @@ func (ts BaseDencunTestSpec) Execute(
 			}
 		}
 	}
-
-	// Send BLSToExecutionChanges messages during Deneb for all validators on BLS credentials
-	allValidators, err := ValidatorsFromBeaconState(
-		testnet.GenesisBeaconState(),
-		*testnet.Spec().Spec,
-		env.Keys,
-	)
-	if err != nil {
-		t.Fatalf("FAIL: Error parsing validators from beacon state")
-	}
-	nonWithdrawableValidators := allValidators.NonWithdrawable()
-	if len(nonWithdrawableValidators) > 0 {
-		beaconClients := testnet.BeaconClients().Running()
-		for i := 0; i < len(nonWithdrawableValidators); i++ {
-			b := beaconClients[i%len(beaconClients)]
-			v := nonWithdrawableValidators[i]
-			if err := v.SignSendBLSToExecutionChange(
-				ctx,
-				b,
-				common.Address{byte(v.Index + 0x100)},
-				ComputeBLSToExecutionDomain(testnet),
-			); err != nil {
-				t.Fatalf(
-					"FAIL: Unable to submit bls-to-execution changes: %v",
-					err,
-				)
-			}
-		}
-	} else {
-		t.Logf("INFO: no validators left on BLS credentials")
-	}
-
-	// Lastly check all clients are on the same head
-	if err = testnet.VerifyELHeads(ctx); err != nil {
-		t.Fatalf("FAIL: error verifying execution layer heads: %v", err)
-	}
-
-	// Check for optimistic sync
-	for i, n := range testnet.Nodes.Running() {
-		bc := n.BeaconClient
-		if op, err := bc.BlockIsOptimistic(ctx, eth2api.BlockHead); op {
-			t.Fatalf(
-				"FAIL: client %d (%s) is optimistic, it should be synced.",
-				i,
-				n.ClientNames(),
-			)
-		} else if err != nil {
-			t.Fatalf("FAIL: error querying optimistic state on client %d (%s): %v", i, n.ClientNames(), err)
-		}
-	}
-
-	if ts.WaitForFinality {
-		finalityCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 5)
-		defer cancel()
-		if _, err := testnet.WaitForCurrentEpochFinalization(finalityCtx); err != nil {
-			t.Fatalf("FAIL: error waiting for epoch finalization: %v", err)
-		}
-	}
 }
 
-// Builder testnet.
-func (ts BuilderDenebTestSpec) Execute(
+func (ts BuilderTestSpec) Verify(
 	t *hivesim.T,
 	ctx context.Context,
 	testnet *tn.Testnet,
 	env *tn.Environment,
 	config *tn.Config,
-	n []clients.NodeDefinition,
 ) {
-	// Run the base test spec execute function
-	ts.BaseDencunTestSpec.Execute(t, ctx, testnet, env, config, n)
+	// Run the base test spec verify function
+	ts.BaseTestSpec.Verify(t, ctx, testnet, env, config)
 
 	// Verify any modified payloads did not make it into the
 	// canonical chain
@@ -387,45 +249,4 @@ func (ts BuilderDenebTestSpec) Execute(
 	t.Logf(
 		"INFO: Validated all signatures of beacon blocks received by builders",
 	)
-}
-
-// Sync testnet.
-func (ts SyncDenebTestSpec) Execute(
-	t *hivesim.T,
-	ctx context.Context,
-	testnet *tn.Testnet,
-	env *tn.Environment,
-	config *tn.Config,
-	n []clients.NodeDefinition,
-) {
-	// Run the base test spec execute function, this sends blobs and constructs the chain
-	ts.BaseDencunTestSpec.Execute(t, ctx, testnet, env, config, n)
-
-	// Wait the specified number of epochs to sync before starting the second client
-	t.Logf("INFO: Waiting %d epochs for running clients to build a chain for last client to sync", ts.EpochsToSync)
-	testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsToSync)*testnet.Spec().SLOTS_PER_EPOCH)
-
-	t.Logf("INFO: Starting secondary clients")
-	// Start the other clients
-	for _, n := range testnet.Nodes {
-		if !n.IsRunning() {
-			if err := n.Start(); err != nil {
-				t.Fatalf("FAIL: error starting node %s: %v", n.ClientNames(), err)
-			}
-		}
-	}
-
-	// Wait for all other clients to sync with a timeout of 1 epoch
-	syncCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 1)
-	defer cancel()
-	if h, err := testnet.WaitForSync(syncCtx); err != nil {
-		t.Fatalf("FAIL: error waiting for sync: %v", err)
-	} else {
-		t.Logf("INFO: all clients synced at head %s", h)
-	}
-
-	// Verify all clients agree on blobs for each slot
-	if err := testnet.VerifyBlobs(ctx); err != nil {
-		t.Fatalf("FAIL: error verifying blobs: %v", err)
-	}
 }
