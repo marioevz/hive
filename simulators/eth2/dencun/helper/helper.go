@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ type TransactionSpammer struct {
 	*hivesim.T
 	ExecutionClients         []*exec_client.ExecutionClient
 	Accounts                 []*globals.TestAccount
+	Recipient                *common.Address
 	TransactionType          helper.TestTransactionType
 	TransactionsPerIteration int
 	SecondsBetweenIterations int
@@ -36,7 +37,7 @@ func (t *TransactionSpammer) Run(ctx context.Context) error {
 	nonceMap := make(map[common.Address]uint64)
 	secondsBetweenIterations := time.Duration(t.SecondsBetweenIterations)
 	txCreator := helper.BaseTransactionCreator{
-		Recipient: &CodeContractAddress,
+		Recipient: t.Recipient,
 		GasLimit:  500000,
 		Amount:    common.Big1,
 		TxType:    t.TransactionType,
