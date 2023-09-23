@@ -1,4 +1,4 @@
-package main
+package suite_base
 
 import (
 	"fmt"
@@ -13,11 +13,10 @@ import (
 	el "github.com/ethereum/hive/simulators/eth2/common/config/execution"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
-	mock_builder "github.com/marioevz/mock-builder/mock"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
-type BaseDencunTestSpec struct {
+type BaseTestSpec struct {
 	// Spec
 	Name        string
 	Description string
@@ -81,7 +80,7 @@ var (
 	ChainID = big.NewInt(7)
 )
 
-func (ts BaseDencunTestSpec) GetTestnetConfig(
+func (ts BaseTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
 ) *testnet.Config {
 	config := *DEFAULT_CONFIG
@@ -134,27 +133,27 @@ func (ts BaseDencunTestSpec) GetTestnetConfig(
 	})
 }
 
-func (ts BaseDencunTestSpec) CanRun(clients.NodeDefinitions) bool {
+func (ts BaseTestSpec) CanRun(clients.NodeDefinitions) bool {
 	// Base test specs can always run
 	return true
 }
 
-func (ts BaseDencunTestSpec) GetName() string {
+func (ts BaseTestSpec) GetName() string {
 	return ts.Name
 }
 
-func (ts BaseDencunTestSpec) GetDescription() string {
+func (ts BaseTestSpec) GetDescription() string {
 	return ts.Description
 }
 
-func (ts BaseDencunTestSpec) GetValidatorCount() uint64 {
+func (ts BaseTestSpec) GetValidatorCount() uint64 {
 	if ts.ValidatorCount != 0 {
 		return ts.ValidatorCount
 	}
 	return DEFAULT_VALIDATOR_COUNT
 }
 
-func (ts BaseDencunTestSpec) GetValidatorKeys(
+func (ts BaseTestSpec) GetValidatorKeys(
 	mnemonic string,
 ) []*cl.ValidatorDetails {
 	keySrc := &cl.MnemonicsKeySource{
@@ -196,113 +195,4 @@ func (ts BaseDencunTestSpec) GetValidatorKeys(
 	}
 
 	return keys
-}
-
-var REQUIRES_FINALIZATION_TO_ACTIVATE_BUILDER = []string{
-	"lighthouse",
-	"teku",
-}
-
-type BuilderDenebTestSpec struct {
-	BaseDencunTestSpec
-	ErrorOnHeaderRequest        bool
-	ErrorOnPayloadReveal        bool
-	InvalidPayloadVersion       bool
-	InvalidatePayload           mock_builder.PayloadInvalidation
-	InvalidatePayloadAttributes mock_builder.PayloadAttributesInvalidation
-}
-
-func (ts BuilderDenebTestSpec) GetTestnetConfig(
-	allNodeDefinitions clients.NodeDefinitions,
-) *testnet.Config {
-	tc := ts.BaseDencunTestSpec.GetTestnetConfig(allNodeDefinitions)
-
-	tc.DenebForkEpoch = big.NewInt(1)
-
-	if len(
-		allNodeDefinitions.FilterByCL(
-			REQUIRES_FINALIZATION_TO_ACTIVATE_BUILDER,
-		),
-	) > 0 {
-		// At least one of the CLs require finalization to start requesting
-		// headers from the builder
-		tc.DenebForkEpoch = big.NewInt(5)
-	}
-
-	// Builders are always enabled for these tests
-	tc.EnableBuilders = true
-
-	// Builder config
-	// Configure the builder according to the error
-	tc.BuilderOptions = make([]mock_builder.Option, 0)
-
-	// Bump the built payloads value
-	tc.BuilderOptions = append(
-		tc.BuilderOptions,
-		mock_builder.WithPayloadWeiValueMultiplier(big.NewInt(10)),
-		mock_builder.WithExtraDataWatermark("builder payload tst"),
-	)
-
-	// Inject test error
-	denebEpoch := beacon.Epoch(tc.DenebForkEpoch.Uint64())
-	if ts.ErrorOnHeaderRequest {
-		tc.BuilderOptions = append(
-			tc.BuilderOptions,
-			mock_builder.WithErrorOnHeaderRequestAtEpoch(denebEpoch),
-		)
-	}
-	if ts.ErrorOnPayloadReveal {
-		tc.BuilderOptions = append(
-			tc.BuilderOptions,
-			mock_builder.WithErrorOnPayloadRevealAtEpoch(denebEpoch),
-		)
-	}
-	if ts.InvalidatePayload != "" {
-		tc.BuilderOptions = append(
-			tc.BuilderOptions,
-			mock_builder.WithPayloadInvalidatorAtEpoch(
-				denebEpoch,
-				ts.InvalidatePayload,
-			),
-		)
-	}
-	if ts.InvalidatePayloadAttributes != "" {
-		tc.BuilderOptions = append(
-			tc.BuilderOptions,
-			mock_builder.WithPayloadAttributesInvalidatorAtEpoch(
-				denebEpoch,
-				ts.InvalidatePayloadAttributes,
-			),
-		)
-	}
-	if ts.InvalidPayloadVersion {
-		tc.BuilderOptions = append(
-			tc.BuilderOptions,
-			mock_builder.WithInvalidBuilderBidVersionAtEpoch(denebEpoch),
-		)
-	}
-
-	return tc
-}
-
-type SyncDenebTestSpec struct {
-	BaseDencunTestSpec
-
-	EpochsToSync beacon.Epoch
-}
-
-func (ts SyncDenebTestSpec) GetTestnetConfig(
-	allNodeDefinitions clients.NodeDefinitions,
-) *testnet.Config {
-	// By default we only have one validating client, and the other clients must sync to it
-	if ts.BaseDencunTestSpec.ValidatingNodeCount == 0 {
-		ts.BaseDencunTestSpec.ValidatingNodeCount = ts.BaseDencunTestSpec.NodeCount - 1
-	}
-
-	tc := ts.BaseDencunTestSpec.GetTestnetConfig(allNodeDefinitions)
-
-	// We disable the start of the last node
-	tc.NodeDefinitions[len(tc.NodeDefinitions)-1].DisableStartup = true
-
-	return tc
 }
