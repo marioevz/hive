@@ -29,6 +29,8 @@ type FirstSlotAfterCheckpoint struct {
 	*common.Checkpoint
 }
 
+var _ VerificationSlot = FirstSlotAfterCheckpoint{}
+
 func (c FirstSlotAfterCheckpoint) Slot(
 	ctx context.Context,
 	t *Testnet,
@@ -42,6 +44,8 @@ type LastSlotAtCheckpoint struct {
 	*common.Checkpoint
 }
 
+var _ VerificationSlot = LastSlotAtCheckpoint{}
+
 func (c LastSlotAtCheckpoint) Slot(
 	ctx context.Context,
 	t *Testnet,
@@ -52,6 +56,8 @@ func (c LastSlotAtCheckpoint) Slot(
 
 // Get last slot according to current time
 type LastestSlotByTime struct{}
+
+var _ VerificationSlot = LastestSlotByTime{}
 
 func (l LastestSlotByTime) Slot(
 	ctx context.Context,
@@ -65,6 +71,8 @@ func (l LastestSlotByTime) Slot(
 
 // Get last slot according to current head of a beacon node
 type LastestSlotByHead struct{}
+
+var _ VerificationSlot = LastestSlotByHead{}
 
 func (l LastestSlotByHead) Slot(
 	ctx context.Context,
@@ -388,6 +396,151 @@ func (t *Testnet) VerifyELHeads(
 
 func (t *Testnet) VerifyBlobs(
 	parentCtx context.Context,
-) error {
-	return nil
+	vs VerificationSlot,
+) (uint64, error) {
+	beaconClients := t.VerificationNodes().BeaconClients().Running()
+	if len(beaconClients) == 0 {
+		return 0, fmt.Errorf("no beacon clients running")
+	}
+	if len(beaconClients) == 1 {
+		return 0, fmt.Errorf("only one beacon client running, can't verify blobs")
+	}
+	var blobCount uint64
+
+	lastSlot, err := vs.Slot(parentCtx, t, beaconClients[0])
+	if err != nil {
+		return 0, err
+	}
+	for slot := lastSlot; slot > 0; slot -= 1 {
+
+		versionedBlock, err := beaconClients[0].BlockV2(parentCtx, eth2api.BlockIdSlot(slot))
+		if err != nil {
+			continue
+		}
+		if !versionedBlock.ContainsKZGCommitments() {
+			// Block can't contain blobs before deneb
+			break
+		}
+
+		blockKzgCommitments := versionedBlock.KZGCommitments()
+
+		refSidecars, err := beaconClients[0].BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
+		if err != nil {
+			continue
+		}
+		blobCount += uint64(len(refSidecars))
+
+		if len(refSidecars) != len(blockKzgCommitments) {
+			return 0, fmt.Errorf(
+				"node %d (%s): block kzg commitments and sidecars lenght differ (sidecar count=%d, block kzg commitments=%d)",
+				0,
+				t.VerificationNodes().Running()[0].ClientNames(),
+				len(refSidecars),
+				len(blockKzgCommitments),
+			)
+		}
+
+		for i := 1; i < len(beaconClients); i++ {
+			// Check the reference client against the other clients, and verify that all clients return the same blobs
+			//  Also keep count of blobs per client
+			bn := beaconClients[i]
+			// Get the sidecars for this client
+			sidecars, err := bn.BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
+			if err != nil {
+				// We already got some blobs from the reference client, so we should not get an error here
+				return 0, err
+			}
+			if len(sidecars) != len(refSidecars) {
+				return 0, fmt.Errorf(
+					"node %d (%s): different number of blobs (got=%d, expected=%d)",
+					i,
+					t.VerificationNodes().Running()[i].ClientNames(),
+					len(sidecars),
+					len(refSidecars),
+				)
+			}
+			for j := 0; j < len(sidecars); j++ {
+				if !bytes.Equal(sidecars[j].Blob[:], refSidecars[j].Blob[:]) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different blobs\ngot=%x\nexpected=%x",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].Blob[:],
+						refSidecars[j].Blob[:],
+					)
+				}
+				// Verify the commitments
+				if !bytes.Equal(sidecars[j].KZGCommitment[:], refSidecars[j].KZGCommitment[:]) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different commitments\ngot=%x\nexpected=%x",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].KZGCommitment[:],
+						refSidecars[j].KZGCommitment[:],
+					)
+				}
+				// Verify the proofs
+				if !bytes.Equal(sidecars[j].KZGProof[:], refSidecars[j].KZGProof[:]) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different proofs\ngot=%x\nexpected=%x",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].KZGProof[:],
+						refSidecars[j].KZGProof[:],
+					)
+				}
+				// Verify the block roots
+				if !bytes.Equal(sidecars[j].BlockRoot[:], refSidecars[j].BlockRoot[:]) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different block roots\ngot=%x\nexpected=%x",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].BlockRoot[:],
+						refSidecars[j].BlockRoot[:],
+					)
+				}
+				// Verify the blob index
+				if sidecars[j].Index != refSidecars[j].Index || uint64(sidecars[j].Index) != uint64(j) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different blob indices\ngot=%d\nexpected=%d",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].Index,
+						j,
+					)
+				}
+				// Verify the slot number
+				if sidecars[j].Slot != refSidecars[j].Slot || uint64(sidecars[j].Slot) != uint64(slot) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different slot numbers\ngot=%d\nexpected=%d",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].Slot,
+						slot,
+					)
+				}
+				// Verify the block parent root
+				if !bytes.Equal(sidecars[j].BlockParentRoot[:], refSidecars[j].BlockParentRoot[:]) {
+					return 0, fmt.Errorf(
+						"node %d (%s): different block parent roots\ngot=%x\nexpected=%x",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].BlockParentRoot[:],
+						refSidecars[j].BlockParentRoot[:],
+					)
+				}
+				// Verify the proposer index
+				if sidecars[j].ProposerIndex != refSidecars[j].ProposerIndex {
+					return 0, fmt.Errorf(
+						"node %d (%s): different proposer indices\ngot=%d\nexpected=%d",
+						i,
+						t.VerificationNodes().Running()[i].ClientNames(),
+						sidecars[j].ProposerIndex,
+						refSidecars[j].ProposerIndex,
+					)
+				}
+			}
+		}
+	}
+	return blobCount, nil
 }
