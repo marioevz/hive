@@ -161,7 +161,11 @@ func (ts BaseTestSpec) Verify(
 	}
 
 	// Verify all clients agree on blobs for each slot
-	if err := testnet.VerifyBlobs(ctx); err != nil {
+	if blobCount, err := testnet.VerifyBlobs(ctx, tn.LastestSlotByHead{}); err != nil {
 		t.Fatalf("FAIL: error verifying blobs: %v", err)
+	} else if blobCount == 0 {
+		t.Fatalf("FAIL: no blobs were included in the chain")
+	} else {
+		t.Logf("INFO: %d blobs were included in the chain", blobCount)
 	}
 }
