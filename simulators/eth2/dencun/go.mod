@@ -7,7 +7,7 @@ require (
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/ethereum/hive/simulators/eth2/common v0.0.0-20230316220410-1364352c32a6
 	github.com/ethereum/hive/simulators/ethereum/engine v0.0.0-20230912233535-da792c2fb747
-	github.com/marioevz/eth-clients v0.0.0-20230925172743-e379ee1ecd6e
+	github.com/marioevz/eth-clients v0.0.0-20230925201418-d5fbddd99b76
 	github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d
 	github.com/protolambda/eth2api v0.0.0-20230316214135-5f8afbd6d05d
 	github.com/protolambda/zrnt v0.30.0
@@ -98,4 +98,4 @@ require (
 
 replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033
 
-replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230922170744-1bd341bc7f0f
+replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230925214210-0d7bf4800c89

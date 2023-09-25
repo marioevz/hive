@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.13.1
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/ethereum/hive/simulators/eth2/common v0.0.0-20230316220410-1364352c32a6
-	github.com/marioevz/eth-clients v0.0.0-20230925172743-e379ee1ecd6e
+	github.com/marioevz/eth-clients v0.0.0-20230925201418-d5fbddd99b76
 	github.com/marioevz/mock-builder v0.0.0-20230501225822-df434a88e375
 	github.com/pkg/errors v0.9.1
 	github.com/protolambda/eth2api v0.0.0-20230316214135-5f8afbd6d05d
