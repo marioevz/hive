@@ -239,7 +239,7 @@ func (v *Validator) VerifyWithdrawnBalance(
 	)
 
 	// Then get the balance
-	execPayload, err := headBlockState.ExecutionPayload()
+	execPayload, _, _, err := headBlockState.ExecutionPayload()
 	if err != nil {
 		return false, errors.Wrap(
 			err,
@@ -297,7 +297,7 @@ func (v *Validator) VerifyWithdrawnBalance(
 				continue
 			}
 
-			execPayload, err := blockState.ExecutionPayload()
+			execPayload, _, _, err := blockState.ExecutionPayload()
 			if err != nil {
 				return false, errors.Wrapf(err, "failed to get execution payload, slot %d", slot)
 			}
