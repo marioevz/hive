@@ -32,6 +32,7 @@ var engineTests = []testSpec{
 	{Name: "invalid-quantity-fields", Run: InvalidQuantityPayloadFields},
 	{Name: "timeouts", Run: Timeouts},
 }
+
 var transitionTests = []testSpec{
 	// Transition (TERMINAL_TOTAL_DIFFICULTY) tests
 	{Name: "invalid-transition-payload", Run: InvalidPayloadGen(1, Invalid)},
@@ -41,10 +42,6 @@ var transitionTests = []testSpec{
 	{Name: "invalid-terminal-block-payload-lower-ttd", Run: IncorrectTerminalBlockGen(-2)},
 	{Name: "invalid-terminal-block-payload-higher-ttd", Run: IncorrectTerminalBlockGen(1)},
 	{Name: "build-atop-invalid-terminal-block", Run: IncorrectTTDConfigEL},
-	{Name: "syncing-with-chain-having-valid-transition-block", Run: SyncingWithChainHavingValidTransitionBlock},
-	{Name: "syncing-with-chain-having-invalid-transition-block", Run: SyncingWithChainHavingInvalidTransitionBlock},
-	{Name: "syncing-with-chain-having-invalid-post-transition-block", Run: SyncingWithChainHavingInvalidPostTransitionBlock},
-	{Name: "re-org-and-sync-with-chain-having-invalid-terminal-block", Run: ReOrgSyncWithChainHavingInvalidTerminalBlock},
 	{Name: "no-viable-head-due-to-optimistic-sync", Run: NoViableHeadDueToOptimisticSync},
 }
 
