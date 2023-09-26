@@ -16,7 +16,7 @@ type SyncTestSpec struct {
 func (ts SyncTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
 ) *testnet.Config {
-	// By default we only have one validating client, and the other clients must sync to it
+	// By default the last client does not validate and must sync to the other clients
 	if ts.BaseTestSpec.ValidatingNodeCount == 0 {
 		ts.BaseTestSpec.ValidatingNodeCount = ts.BaseTestSpec.NodeCount - 1
 	}

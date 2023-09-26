@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
 	suite_base "github.com/ethereum/hive/simulators/eth2/dencun/suites/base"
 	suite_builder "github.com/ethereum/hive/simulators/eth2/dencun/suites/builder"
+	suite_reorg "github.com/ethereum/hive/simulators/eth2/dencun/suites/reorg"
 	suite_sync "github.com/ethereum/hive/simulators/eth2/dencun/suites/sync"
 )
 
@@ -28,4 +29,5 @@ func main() {
 	hivesim.MustRunSuite(sim, suite_base.Suite(clientsByRole))
 	hivesim.MustRunSuite(sim, suite_sync.Suite(clientsByRole))
 	hivesim.MustRunSuite(sim, suite_builder.Suite(clientsByRole))
+	hivesim.MustRunSuite(sim, suite_reorg.Suite(clientsByRole))
 }
