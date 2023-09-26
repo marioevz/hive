@@ -191,6 +191,10 @@ func ConsensusConfigsBundle(
 	if err != nil {
 		return nil, err
 	}
+	denebPreset, err := yaml.Marshal(spec.DenebPreset)
+	if err != nil {
+		return nil, err
+	}
 	return hivesim.Bundle(
 		hivesim.WithDynamicFile(
 			"/hive/input/config.yaml",
@@ -211,6 +215,10 @@ func ConsensusConfigsBundle(
 		hivesim.WithDynamicFile(
 			"/hive/input/preset_capella.yaml",
 			config.BytesSource(capellaPreset),
+		),
+		hivesim.WithDynamicFile(
+			"/hive/input/preset_deneb.yaml",
+			config.BytesSource(denebPreset),
 		),
 		hivesim.Params{
 			"HIVE_ETH2_ETH1_GENESIS_HASH": executionGenesisHash.String(),
