@@ -228,8 +228,8 @@ github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033 h1:sn57n+lbJrLS8F
 github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033/go.mod h1:hcwWCT4sF1X7KsMZ535MvDZVk5M20Uyj+x2LARZjQsM=
 github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d h1:MKDrztpuiYtlG8MpW7wES2f37bEevR5F1ziR2x8VzfA=
 github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d/go.mod h1:SNZ7dv5aXLJQZ88JNmARdXz9N8HEbU5KVyitRuXnPXY=
-github.com/marioevz/zrnt v0.26.2-0.20230925214210-0d7bf4800c89 h1:Oi8PaxA+oP1qAjdw6F3+s2naTWoPz+uGsTflJcYJGh4=
-github.com/marioevz/zrnt v0.26.2-0.20230925214210-0d7bf4800c89/go.mod h1:MzAcHPo2QQIx+IEPdxXMiqKtYRUlszz7RA/fhAuOm1I=
+github.com/marioevz/zrnt v0.26.2-0.20230927204959-21993eae2d9f h1:pXAUGkBHJVQ2OH8SDFi26HYgJYcFJ8As+o+Gn7ASuCY=
+github.com/marioevz/zrnt v0.26.2-0.20230927204959-21993eae2d9f/go.mod h1:MzAcHPo2QQIx+IEPdxXMiqKtYRUlszz7RA/fhAuOm1I=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.8/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
 github.com/mattn/go-colorable v0.1.11/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=
