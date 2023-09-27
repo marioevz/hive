@@ -231,7 +231,7 @@ func StartTestnet(
 				ProxyConfig: &exec_client.ExecutionProxyConfig{
 					Host:                   simulatorIP,
 					Port:                   exec_client.PortEngineRPC + nodeIndex,
-					TrackForkchoiceUpdated: true,
+					TrackForkchoiceUpdated: false,
 					LogEngineCalls:         env.LogEngineCalls,
 				},
 			},
