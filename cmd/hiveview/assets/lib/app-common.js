@@ -25,12 +25,17 @@ function hiveInfoHTML(data) {
     var txt = '';
     if (data.buildDate) {
         let date = new Date(data.buildDate).toLocaleString();
-        txt += '<span>built: ' + date + '</span>';
+        txt += '<span>binary built: ' + date + '</span>';
     }
-    if (data.sourceCommit) {
-        let url = 'https://github.com/ethereum/hive/commits/' + escape(data.sourceCommit);
-        let link = makeLink(url, data.sourceCommit.substring(0, 8));
-        txt += '<span>commit: ' + link.outerHTML + '</span>';
+    if (data.binaryCommit) {
+        let url = 'https://github.com/ethereum/hive/commits/' + escape(data.binaryCommit);
+        let link = makeLink(url, data.binaryCommit.substring(0, 8));
+        txt += '<span>binary commit: ' + link.outerHTML + '</span>';
+    }
+    if (data.simulatorsCommit) {
+        let url = 'https://github.com/ethereum/hive/commits/' + escape(data.simulatorsCommit);
+        let link = makeLink(url, data.simulatorsCommit.substring(0, 8));
+        txt += '<span>simulators commit: ' + link.outerHTML + '</span>';
     }
     return txt;
 }
