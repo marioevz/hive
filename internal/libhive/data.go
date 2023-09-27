@@ -74,9 +74,10 @@ type ClientInfo struct {
 
 // HiveInstance contains information about hive itself.
 type HiveInstance struct {
-	SourceCommit string `json:"sourceCommit"`
-	SourceDate   string `json:"sourceDate"`
-	BuildDate    string `json:"buildDate"`
+	BinaryCommit     string `json:"binaryCommit"`
+	BinaryDate       string `json:"binaryDate"`
+	BuildDate        string `json:"buildDate"`
+	SimulatorsCommit string `json:"simulatorsCommit"`
 }
 
 // ClientDefinition is served by the /clients API endpoint to list the available clients

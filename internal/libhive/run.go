@@ -1,6 +1,7 @@
 package libhive
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
@@ -297,11 +299,12 @@ func createWorkspace(logdir string) error {
 
 func writeInstanceInfo(logdir string) {
 	var obj HiveInstance
-	obj.SourceCommit, obj.SourceDate = hiveVersion()
+	obj.BinaryCommit, obj.BinaryDate = hiveVersion()
 	buildDate := hiveBuildTime()
 	if !buildDate.IsZero() {
 		obj.BuildDate = buildDate.Format("2006-01-02T15:04:05Z")
 	}
+	obj.SimulatorsCommit = simulatorsVersion()
 
 	enc, _ := json.Marshal(&obj)
 	err := os.WriteFile(filepath.Join(logdir, "hive.json"), enc, 0644)
@@ -334,4 +337,15 @@ func hiveBuildTime() time.Time {
 		return time.Time{}
 	}
 	return stat.ModTime()
+}
+
+func simulatorsVersion() (commit string) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return ""
+	}
+	return out.String()
 }
