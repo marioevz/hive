@@ -7,7 +7,7 @@ import (
 )
 
 var testSuite = hivesim.Suite{
-	Name:        "eth2-deneb",
+	Name:        "eth2-deneb-testnet",
 	Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Cancun+Deneb.`,
 }
 
@@ -22,6 +22,7 @@ func init() {
 			`,
 			DenebGenesis: false,
 			GenesisExecutionWithdrawalCredentialsShares: 1,
+			WaitForFinality: true,
 		},
 		BaseTestSpec{
 			Name: "test-deneb-genesis",
