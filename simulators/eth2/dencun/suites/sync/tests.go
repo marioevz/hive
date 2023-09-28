@@ -23,10 +23,11 @@ func init() {
 				Test syncing of the beacon chain by a secondary non-validating client, sync from capella.
 				`,
 				NodeCount: 3,
+				// Wait for 1 epoch after the fork to start the syncing client
+				EpochsAfterFork: 1,
 				// All validators start with BLS withdrawal credentials
 				GenesisExecutionWithdrawalCredentialsShares: 0,
 			},
-			EpochsToSync: 1,
 		},
 		SyncTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
@@ -35,11 +36,12 @@ func init() {
 				Test syncing of the beacon chain by a secondary non-validating client, sync from deneb.
 				`,
 				NodeCount: 3,
+				// Wait for 1 epoch after the fork to start the syncing client
+				EpochsAfterFork: 1,
 				// All validators start with BLS withdrawal credentials
 				GenesisExecutionWithdrawalCredentialsShares: 0,
 				DenebGenesis: true,
 			},
-			EpochsToSync: 1,
 		},
 	)
 }

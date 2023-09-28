@@ -20,6 +20,7 @@ type TestSpec interface {
 	GetDescription() string
 	ExecutePreFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	ExecutePostFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
+	ExecutePostForkWait(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	Verify(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	GetValidatorKeys(string) []*consensus_config.ValidatorDetails
 }
@@ -67,10 +68,10 @@ func SuiteHydrate(
 				test.ExecutePreFork(t, ctx, testnet, env, config)
 
 				// Wait for the fork
-				slotsUntilDeneb := beacon.Slot(
+				slotsUntilFork := beacon.Slot(
 					config.DenebForkEpoch.Uint64(),
 				)*testnet.Spec().SLOTS_PER_EPOCH + 4
-				timeoutCtx, cancel := testnet.Spec().SlotTimeoutContext(ctx, slotsUntilDeneb)
+				timeoutCtx, cancel := testnet.Spec().SlotTimeoutContext(ctx, slotsUntilFork)
 				defer cancel()
 				if err := testnet.WaitForFork(timeoutCtx, Deneb); err != nil {
 					t.Fatalf("FAIL: error waiting for deneb: %v", err)
@@ -78,6 +79,9 @@ func SuiteHydrate(
 
 				// Execute post-fork
 				test.ExecutePostFork(t, ctx, testnet, env, config)
+
+				// Execute post-fork wait
+				test.ExecutePostForkWait(t, ctx, testnet, env, config)
 
 				// Verify
 				test.Verify(t, ctx, testnet, env, config)
