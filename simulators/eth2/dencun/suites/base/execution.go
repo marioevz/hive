@@ -34,6 +34,7 @@ func (ts BaseTestSpec) ExecutePreFork(
 	// Setup the transaction spammers, both normal and blob transactions
 	normalTxSpammer := helper.TransactionSpammer{
 		T:                        t,
+		Name:                     "normal",
 		Recipient:                &CodeContractAddress,
 		ExecutionClients:         testnet.ExecutionClients().Running(),
 		Accounts:                 normalTxAccounts,
@@ -85,6 +86,7 @@ func (ts BaseTestSpec) ExecutePostFork(
 	// Start sending blob transactions from dedicated accounts
 	blobTxSpammer := helper.TransactionSpammer{
 		T:                        t,
+		Name:                     "blobs",
 		Recipient:                &CodeContractAddress,
 		ExecutionClients:         testnet.ExecutionClients().Running(),
 		Accounts:                 blobTxAccounts,
