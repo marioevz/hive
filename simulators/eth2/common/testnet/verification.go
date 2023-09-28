@@ -3,6 +3,7 @@ package testnet
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"time"
@@ -398,11 +399,12 @@ func (t *Testnet) VerifyBlobs(
 	parentCtx context.Context,
 	vs VerificationSlot,
 ) (uint64, error) {
-	beaconClients := t.VerificationNodes().BeaconClients().Running()
-	if len(beaconClients) == 0 {
+	nodes := t.VerificationNodes().Running()
+	beaconClients := nodes.BeaconClients()
+	if len(nodes) == 0 {
 		return 0, fmt.Errorf("no beacon clients running")
 	}
-	if len(beaconClients) == 1 {
+	if len(nodes) == 1 {
 		return 0, fmt.Errorf("only one beacon client running, can't verify blobs")
 	}
 	var blobCount uint64
@@ -422,6 +424,15 @@ func (t *Testnet) VerifyBlobs(
 			break
 		}
 
+		// Get the execution block from the execution client
+		executionPayload, _, _, err := versionedBlock.ExecutionPayload()
+		if err != nil {
+			panic(err)
+		}
+		executionBlock, err := nodes[0].ExecutionClient.BlockByHash(parentCtx, executionPayload.BlockHash)
+		if err != nil {
+			panic(err)
+		}
 		blockKzgCommitments := versionedBlock.KZGCommitments()
 
 		refSidecars, err := beaconClients[0].BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
@@ -437,6 +448,50 @@ func (t *Testnet) VerifyBlobs(
 				t.VerificationNodes().Running()[0].ClientNames(),
 				len(refSidecars),
 				len(blockKzgCommitments),
+			)
+		}
+
+		// Verify against the execution block transactions
+		executionBlockHashesCount := 0
+		for _, tx := range executionBlock.Transactions() {
+			blobHashes := tx.BlobHashes()
+			versionedHashVersion := byte(1)
+			if len(blobHashes) > 0 {
+				for _, blobHash := range blobHashes {
+					if executionBlockHashesCount < len(blockKzgCommitments) {
+						// Sha256 the kzg commitment and modify the first byte to be the version
+						hasher := sha256.New()
+						hasher.Write(blockKzgCommitments[executionBlockHashesCount][:])
+						kzgHash := hasher.Sum(nil)
+						if !bytes.Equal(blobHash[1:], kzgHash[1:]) {
+							return 0, fmt.Errorf(
+								"node %d (%s): block kzg commitments and execution block hashes differ (block kzg commitment=%x, execution block hash=%x)",
+								0,
+								t.VerificationNodes().Running()[0].ClientNames(),
+								blockKzgCommitments[executionBlockHashesCount][:],
+								blobHash[:],
+							)
+						}
+						if blobHash[0] != versionedHashVersion {
+							return 0, fmt.Errorf(
+								"node %d (%s): execution blob hash does not contain the correct version: %d",
+								0,
+								t.VerificationNodes().Running()[0].ClientNames(),
+								blobHash[0],
+							)
+						}
+					} // else: test will fail after the loop, but we need to keep counting the hashes
+					executionBlockHashesCount++
+				}
+			}
+		}
+		if executionBlockHashesCount != len(blockKzgCommitments) {
+			return 0, fmt.Errorf(
+				"node %d (%s): block kzg commitments and execution block hashes lenght differ (block kzg commitment count=%d, execution block hash count=%d)",
+				0,
+				t.VerificationNodes().Running()[0].ClientNames(),
+				len(blockKzgCommitments),
+				executionBlockHashesCount,
 			)
 		}
 
