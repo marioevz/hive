@@ -22,7 +22,7 @@ func init() {
 			`,
 			DenebGenesis: false,
 			GenesisExecutionWithdrawalCredentialsShares: 1,
-			EpochsAfterDeneb: 1,
+			EpochsAfterFork: 1,
 		},
 		BaseTestSpec{
 			Name: "test-deneb-genesis",
@@ -31,7 +31,7 @@ func init() {
 		`,
 			DenebGenesis: true,
 			GenesisExecutionWithdrawalCredentialsShares: 1,
-			EpochsAfterDeneb: 1,
+			WaitForFinality: true,
 		},
 	)
 }

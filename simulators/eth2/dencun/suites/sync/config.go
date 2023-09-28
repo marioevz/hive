@@ -4,13 +4,10 @@ import (
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
 	suite_base "github.com/ethereum/hive/simulators/eth2/dencun/suites/base"
-	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type SyncTestSpec struct {
 	suite_base.BaseTestSpec
-
-	EpochsToSync beacon.Epoch
 }
 
 func (ts SyncTestSpec) GetTestnetConfig(

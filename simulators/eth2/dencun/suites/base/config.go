@@ -36,8 +36,8 @@ type BaseTestSpec struct {
 	GenesisSlashedShares                        int
 
 	// Verifications
-	EpochsAfterDeneb beacon.Epoch
-	WaitForFinality  bool
+	EpochsAfterFork beacon.Epoch
+	WaitForFinality bool
 
 	// Extra Gwei
 	ExtraGwei beacon.Gwei

@@ -129,16 +129,16 @@ func (ts BaseTestSpec) ExecutePostFork(
 	}
 }
 
-func (ts BaseTestSpec) Verify(
+func (ts BaseTestSpec) ExecutePostForkWait(
 	t *hivesim.T,
 	ctx context.Context,
 	testnet *tn.Testnet,
 	env *tn.Environment,
 	config *tn.Config,
 ) {
-	if ts.EpochsAfterDeneb != 0 {
+	if ts.EpochsAfterFork != 0 {
 		// Wait for the specified number of epochs after Deneb
-		testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsAfterDeneb)*testnet.Spec().SLOTS_PER_EPOCH)
+		testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsAfterFork)*testnet.Spec().SLOTS_PER_EPOCH)
 	}
 	if ts.WaitForFinality {
 		finalityCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 5)
@@ -147,7 +147,15 @@ func (ts BaseTestSpec) Verify(
 			t.Fatalf("FAIL: error waiting for epoch finalization: %v", err)
 		}
 	}
+}
 
+func (ts BaseTestSpec) Verify(
+	t *hivesim.T,
+	ctx context.Context,
+	testnet *tn.Testnet,
+	env *tn.Environment,
+	config *tn.Config,
+) {
 	// Check all clients are on the same head
 	if err := testnet.VerifyELHeads(ctx); err != nil {
 		t.Fatalf("FAIL: error verifying execution layer heads: %v", err)

@@ -24,10 +24,11 @@ func init() {
 				Start two clients disconnected from each other, then connect them through a third client and check that they re-org.
 				`,
 				NodeCount: 5,
+				// Wait for 1 epoch after the fork to start the last client
+				EpochsAfterFork: 1,
 				// All validators start with BLS withdrawal credentials
 				GenesisExecutionWithdrawalCredentialsShares: 0,
 			},
-			EpochsToSync: 1,
 			// Chain A has 66% of the validators, chain B has 33% of the validators
 			ChainWeights: []uint64{2, 1},
 		},
@@ -39,11 +40,12 @@ func init() {
 				Start two clients disconnected from each other, then connect them through a third client and check that they re-org.
 				`,
 				NodeCount: 5,
+				// Wait for 1 epoch after the fork to start the last client
+				EpochsAfterFork: 1,
 				// All validators start with BLS withdrawal credentials
 				GenesisExecutionWithdrawalCredentialsShares: 0,
 				DenebGenesis: true,
 			},
-			EpochsToSync: 1,
 			// Chain A has 66% of the validators, chain B has 33% of the validators
 			ChainWeights: []uint64{2, 1},
 		},
