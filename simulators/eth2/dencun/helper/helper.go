@@ -24,6 +24,7 @@ import (
 
 type TransactionSpammer struct {
 	*hivesim.T
+	Name                     string
 	ExecutionClients         []*exec_client.ExecutionClient
 	Accounts                 []*globals.TestAccount
 	Recipient                *common.Address
@@ -51,26 +52,27 @@ func (t *TransactionSpammer) Run(ctx context.Context) error {
 		case <-time.After(time.Second * secondsBetweenIterations):
 			currentClient := t.ExecutionClients[iteration%len(t.ExecutionClients)]
 			h, err := currentClient.HeaderByNumber(ctx, nil)
-			if err != nil {
-				panic(err)
-			}
-			for i := 0; i < t.TransactionsPerIteration; i++ {
-				sender := t.Accounts[txsSent%len(t.Accounts)]
-				nonce := nonceMap[sender.GetAddress()]
-				tx, err := txCreator.MakeTransaction(sender, nonce, h.Time)
-				if err != nil {
-					panic(err)
+			if err == nil {
+				for i := 0; i < t.TransactionsPerIteration; i++ {
+					sender := t.Accounts[txsSent%len(t.Accounts)]
+					nonce := nonceMap[sender.GetAddress()]
+					tx, err := txCreator.MakeTransaction(sender, nonce, h.Time)
+					if err != nil {
+						panic(err)
+					}
+					if err := currentClient.SendTransaction(
+						ctx,
+						tx,
+					); err != nil {
+						t.Logf("INFO: Error sending tx (spammer %s): %v, sender: %s (%d), nonce=%d", t.Name, err, sender.GetAddress().String(), sender.GetIndex(), nonce)
+					}
+					nonceMap[sender.GetAddress()] = nonce + 1
+					txsSent += 1
 				}
-				if err := currentClient.SendTransaction(
-					ctx,
-					tx,
-				); err != nil {
-					t.Logf("INFO: Error sending tx: %v, sender: %s, nonce=%d", err, sender.GetAddress().String(), nonce)
-				}
-				nonceMap[sender.GetAddress()] = nonce + 1
-				txsSent += 1
+				iteration += 1
+			} else {
+				t.Logf("INFO: Error fetching header: %v", err)
 			}
-			iteration += 1
 		}
 	}
 }
