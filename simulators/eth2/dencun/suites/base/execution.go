@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
 	engine_helper "github.com/ethereum/hive/simulators/ethereum/engine/helper"
 	"github.com/protolambda/eth2api"
+	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 var Deneb string = "deneb"
@@ -133,6 +134,10 @@ func (ts BaseTestSpec) Verify(
 	env *tn.Environment,
 	config *tn.Config,
 ) {
+	if ts.EpochsAfterDeneb != 0 {
+		// Wait for the specified number of epochs after Deneb
+		testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsAfterDeneb)*testnet.Spec().SLOTS_PER_EPOCH)
+	}
 	if ts.WaitForFinality {
 		finalityCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 5)
 		defer cancel()
