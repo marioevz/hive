@@ -33,7 +33,7 @@ func init() {
 				Name: "test-builders-invalid-payload-attributes-beacon-root",
 				Description: `
 				Test canonical chain can still finalize if the builders start
-				building payloads with invalid withdrawals list.
+				building payloads with invalid parent beacon block root.
 				`,
 				// All validators can withdraw from the start
 				GenesisExecutionWithdrawalCredentialsShares: 1,
@@ -56,7 +56,7 @@ func init() {
 		},
 		BuilderTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-builders-error-on-deneb-unblind-payload-requestr",
+				Name: "test-builders-error-on-deneb-unblind-payload-request",
 				Description: `
 				Test canonical chain can still finalize if the builders start
 				returning error on unblinded payload request after deneb transition.

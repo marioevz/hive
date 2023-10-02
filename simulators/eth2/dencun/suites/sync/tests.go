@@ -18,7 +18,7 @@ func init() {
 	Tests = append(Tests,
 		SyncTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-sync-sanity-from-capella",
+				Name: "test-sync-from-capella",
 				Description: `
 				Test syncing of the beacon chain by a secondary non-validating client, sync from capella.
 				`,
@@ -31,7 +31,7 @@ func init() {
 		},
 		SyncTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-sync-sanity-from-deneb",
+				Name: "test-sync-from-deneb",
 				Description: `
 				Test syncing of the beacon chain by a secondary non-validating client, sync from deneb.
 				`,
