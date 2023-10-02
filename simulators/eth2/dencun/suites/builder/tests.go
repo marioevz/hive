@@ -72,7 +72,7 @@ func init() {
 				Name: "test-builders-invalid-payload-version",
 				Description: `
 				Test consensus clients correctly reject a built payload if the
-				version is outdated (bellatrix instead of deneb).
+				version is outdated (capella instead of deneb).
 				`,
 				// All validators can withdraw from the start
 				GenesisExecutionWithdrawalCredentialsShares: 1,
