@@ -93,6 +93,7 @@ func (ts BaseTestSpec) ExecutePostFork(
 		TransactionType:          engine_helper.BlobTxOnly,
 		TransactionsPerIteration: 2,
 		SecondsBetweenIterations: int(testnet.Spec().SECONDS_PER_SLOT),
+		BlobCount:                ts.BlobCount,
 	}
 
 	go blobTxSpammer.Run(ctx)

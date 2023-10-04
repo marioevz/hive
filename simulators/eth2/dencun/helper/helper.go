@@ -31,6 +31,7 @@ type TransactionSpammer struct {
 	TransactionType          helper.TestTransactionType
 	TransactionsPerIteration int
 	SecondsBetweenIterations int
+	BlobCount                *big.Int
 }
 
 func (t *TransactionSpammer) Run(ctx context.Context) error {
@@ -42,6 +43,7 @@ func (t *TransactionSpammer) Run(ctx context.Context) error {
 		GasLimit:  500000,
 		Amount:    common.Big1,
 		TxType:    t.TransactionType,
+		BlobCount: t.BlobCount,
 	}
 	txsSent := 0
 	iteration := 0

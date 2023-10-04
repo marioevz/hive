@@ -41,6 +41,9 @@ type BaseTestSpec struct {
 
 	// Extra Gwei
 	ExtraGwei beacon.Gwei
+
+	// Blob count of each blob tx
+	BlobCount *big.Int
 }
 
 var (
