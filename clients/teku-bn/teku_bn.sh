@@ -76,4 +76,6 @@ echo Starting Teku Beacon Node
     --data-storage-mode=ARCHIVE \
     --Xstartup-target-peer-count=0 \
     --p2p-subscribe-all-subnets-enabled \
-    --Xtrusted-setup="$trusted_setup_path"
+    --Xtrusted-setup="$trusted_setup_path" \
+    --Xpeer-rate-limit=100000 \
+    --Xpeer-request-limit=1000
