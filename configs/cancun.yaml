@@ -40,6 +40,17 @@
     tag: main
 
 - client: teku-bn
+  nametag: evil
+  build_args:
+      baseimage: ethpandaops/teku
+      tag: evil-blobs-fb6275a
+- client: teku-vc
+  nametag: evil
+  build_args:
+      baseimage: ethpandaops/teku
+      tag: evil-blobs-fb6275a
+
+- client: teku-bn
 - client: teku-vc
 
 - client: prysm-bn
