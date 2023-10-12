@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/hive/simulators/eth2/common/config"
 	consensus_config "github.com/ethereum/hive/simulators/eth2/common/config/consensus"
 	execution_config "github.com/ethereum/hive/simulators/eth2/common/config/execution"
+	blobber_config "github.com/marioevz/blobber/config"
 	mock_builder "github.com/marioevz/mock-builder/mock"
 )
 
@@ -45,6 +46,10 @@ type Config struct {
 	// Builders
 	EnableBuilders bool                  `json:"enable_builders,omitempty"`
 	BuilderOptions []mock_builder.Option `json:"builder_options,omitempty"`
+
+	// Blobber
+	EnableBlobber  bool                    `json:"enable_blobber,omitempty"`
+	BlobberOptions []blobber_config.Option `json:"blobber_options,omitempty"`
 }
 
 // Choose a configuration value. `b` takes precedence

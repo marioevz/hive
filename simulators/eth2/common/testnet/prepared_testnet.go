@@ -210,10 +210,6 @@ func prepareTestnet(
 
 	// Define additional start options for beacon chain
 	commonOpts := hivesim.Params{
-		"HIVE_ETH2_BN_API_PORT": fmt.Sprintf(
-			"%d",
-			beacon_client.PortBeaconAPI,
-		),
 		"HIVE_ETH2_BN_GRPC_PORT": fmt.Sprintf(
 			"%d",
 			beacon_client.PortBeaconGRPC,
@@ -480,6 +476,10 @@ func (p *PreparedTestnet) prepareBeaconNode(
 				"%d",
 				config.ClientIndex,
 			),
+			"HIVE_ETH2_BN_API_PORT": fmt.Sprintf(
+				"%d",
+				cl.Config.BeaconAPIPort,
+			),
 		})
 
 		currentlyRunningBcs := testnet.BeaconClients().
@@ -575,6 +575,26 @@ func (p *PreparedTestnet) prepareValidatorClient(
 		// Hook up validator to beacon node
 		bnAPIOpt := hivesim.Params{
 			"HIVE_ETH2_BN_API_IP": bn.GetIP().String(),
+		}
+		if testnet.blobber != nil {
+			simIP, err := testnet.T.Sim.ContainerNetworkIP(
+				testnet.T.SuiteID,
+				"bridge",
+				"simulation",
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			p := testnet.blobber.AddBeaconClient(bn)
+			bnAPIOpt = bnAPIOpt.Set(
+				"HIVE_ETH2_BN_API_IP",
+				simIP,
+			)
+			bnAPIOpt = bnAPIOpt.Set(
+				"HIVE_ETH2_BN_API_PORT",
+				fmt.Sprintf("%d", p.Port()),
+			)
 		}
 		keysOpt := cl.KeysBundle(keys)
 		opts := []hivesim.StartOption{p.validatorOpts, keysOpt, bnAPIOpt}
