@@ -113,7 +113,20 @@ func init() {
 				BroadcastExtraBlobFirst: true,
 				IncorrectSignature:      true,
 			},
-			// The extra blob has an incorrect signature, so we might get disconnected+banned and unable to send the rest of the blobs
+			// TODO: The extra blob has an incorrect signature, so we might get disconnected+banned and unable to send the rest of the blobs
+			BlobberActionCausesMissedSlot: false,
+		},
+		P2PBlobsGossipTestSpec{
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "test-blob-gossiping-conflicting-blobs",
+				Description: `
+		Test chain health where there are conflicting blobs broadcasted to different clients, all with correct signatures and pointing to the correct block root
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			BlobberSlotAction: blobber_slot_actions.ConflictingBlobs{},
+			// The blobs do not break any rejection rules
 			BlobberActionCausesMissedSlot: false,
 		},
 	)
