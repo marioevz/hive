@@ -37,7 +37,6 @@ type BaseTestSpec struct {
 
 	// Verifications
 	EpochsAfterFork beacon.Epoch
-	MaxMissedSlots  beacon.Slot
 	WaitForFinality bool
 
 	// Extra Gwei
