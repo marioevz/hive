@@ -137,8 +137,16 @@ func (ts BaseTestSpec) ExecutePostForkWait(
 	config *tn.Config,
 ) {
 	if ts.EpochsAfterFork != 0 {
-		// Wait for the specified number of epochs after Deneb
-		testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsAfterFork)*testnet.Spec().SLOTS_PER_EPOCH)
+		// Wait for the specified number of epochs after fork
+		var err error
+		if ts.MaxMissedSlots > 0 {
+			err = testnet.WaitSlotsWithMaxMissedSlots(ctx, beacon.Slot(ts.EpochsAfterFork)*testnet.Spec().SLOTS_PER_EPOCH, ts.MaxMissedSlots)
+		} else {
+			err = testnet.WaitSlots(ctx, beacon.Slot(ts.EpochsAfterFork)*testnet.Spec().SLOTS_PER_EPOCH)
+		}
+		if err != nil {
+			t.Fatalf("FAIL: error waiting for %d epochs after fork: %v", ts.EpochsAfterFork, err)
+		}
 	}
 	if ts.WaitForFinality {
 		finalityCtx, cancel := testnet.Spec().EpochTimeoutContext(ctx, 5)
