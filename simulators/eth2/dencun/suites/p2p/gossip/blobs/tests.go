@@ -25,8 +25,6 @@ func init() {
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
-				EpochsAfterFork: 1,
-				MaxMissedSlots:  3,
 			},
 		},
 		P2PBlobsGossipTestSpec{
@@ -38,8 +36,6 @@ func init() {
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
-				EpochsAfterFork: 1,
-				MaxMissedSlots:  3,
 			},
 		},
 		P2PBlobsGossipTestSpec{
@@ -53,37 +49,30 @@ func init() {
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
-				EpochsAfterFork: 1,
-				MaxMissedSlots:  3,
 			},
 		},
 		P2PBlobsGossipTestSpec{
-			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
-				BroadcastBlockFirst:     true,
-				BroadcastExtraBlobFirst: true,
-			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-extra-blob-with-correct-kzg-commitment",
+				Name: "test-blob-gossiping-extra-blob",
 				Description: `
 		Test chain health where there is always an extra blob with:
 		 - Correct KZG commitment
 		 - Correct block root
 		 - Correct proposer signature
 		 - Broadcasted after the block
-		 - Broadcasted before the rest of the blobs
+		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
-				EpochsAfterFork: 1,
-				MaxMissedSlots:  3,
 			},
-		},
-		P2PBlobsGossipTestSpec{
 			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
 				BroadcastBlockFirst:     true,
 				BroadcastExtraBlobFirst: true,
-				IncorrectKZGCommitment:  true,
 			},
+			// Since the extra blob has a correct signature, and comes before the correct blob, the correct blob is ignored
+			BlobberActionCausesMissedSlot: true,
+		},
+		P2PBlobsGossipTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
 				Name: "test-blob-gossiping-extra-blob-with-incorrect-kzg-commitment",
 				Description: `
@@ -92,13 +81,40 @@ func init() {
 		 - Correct block root
 		 - Correct proposer signature
 		 - Broadcasted after the block
-		 - Broadcasted before the rest of the blobs
+		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
-				EpochsAfterFork: 1,
-				MaxMissedSlots:  3,
 			},
+			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
+				BroadcastBlockFirst:     true,
+				BroadcastExtraBlobFirst: true,
+				IncorrectKZGCommitment:  true,
+			},
+			// Since the extra blob has a correct signature, and comes before the correct blob, the correct blob is ignored
+			BlobberActionCausesMissedSlot: true,
+		},
+		P2PBlobsGossipTestSpec{
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "test-blob-gossiping-extra-blob-with-incorrect-signature",
+				Description: `
+		Test chain health where there is always an extra blob with:
+		 - Correct KZG commitment
+		 - Correct block root
+		 - Incorrect proposer signature
+		 - Broadcasted after the block
+		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
+				BroadcastBlockFirst:     true,
+				BroadcastExtraBlobFirst: true,
+				IncorrectSignature:      true,
+			},
+			// The extra blob has an incorrect signature, so we might get disconnected+banned and unable to send the rest of the blobs
+			BlobberActionCausesMissedSlot: false,
 		},
 	)
 }
