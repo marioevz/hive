@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/hive/hivesim"
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
-	"github.com/ethereum/hive/simulators/eth2/common/testnet"
 	tn "github.com/ethereum/hive/simulators/eth2/common/testnet"
 	suite_base "github.com/ethereum/hive/simulators/eth2/dencun/suites/base"
 	blobber_config "github.com/marioevz/blobber/config"
@@ -27,7 +26,7 @@ const (
 
 func (ts P2PBlobsGossipTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
-) *testnet.Config {
+) *tn.Config {
 	config := ts.BaseTestSpec.GetTestnetConfig(allNodeDefinitions)
 
 	config.EnableBlobber = true
@@ -39,6 +38,7 @@ func (ts P2PBlobsGossipTestSpec) GetTestnetConfig(
 	config.BlobberOptions = []blobber_config.Option{
 		blobber_config.WithSlotAction(ts.BlobberSlotAction),
 		blobber_config.WithSlotActionFrequency(blobberActionFrequency),
+		blobber_config.WithAlwaysErrorValidatorResponse(),
 	}
 
 	return config
