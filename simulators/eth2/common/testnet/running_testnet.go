@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -204,6 +205,13 @@ func StartTestnet(
 		if err != nil {
 			t.Fatalf("FAIL: Unable to create blobber: %v", err)
 		}
+
+		// Add the blobber as trusted peer to the beacon nodes
+		ids := testnet.blobber.GetNextPeerIDs(5) // Five should be enough for any test for now
+		prep.beaconOpts = hivesim.Bundle(prep.beaconOpts,
+			hivesim.Params{
+				"HIVE_ETH2_TRUSTED_PEER_IDS": strings.Join(ids, ","),
+			})
 	}
 
 	// For each key partition, we start a client bundle that consists of:
