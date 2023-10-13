@@ -648,6 +648,14 @@ github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/marioevz/blobber v0.0.0-20231012031657-188805a84145 h1:ZXguc/KsUjz9muHZnZvcSlS1oNE63L/dAo1eaeGlzJU=
 github.com/marioevz/blobber v0.0.0-20231012031657-188805a84145/go.mod h1:b6fAQNJUv4LauDr5UQldYRO2mtAoxFJ76xvqEtOcvAA=
+github.com/marioevz/blobber v0.0.0-20231013164402-1a6681887804 h1:oGELzREKgrYtY/UTne8CM/axiob/eCRHAXNz/vZatXs=
+github.com/marioevz/blobber v0.0.0-20231013164402-1a6681887804/go.mod h1:mnY51YOHnunmFqXohzaENinu+iZVDQbKgPTyET18Spo=
+github.com/marioevz/blobber v0.0.0-20231013172951-967805c26980 h1:QuFy9dOzSm8dxjBUoMtHgWwzzxN4EHymrMheKBfdD6A=
+github.com/marioevz/blobber v0.0.0-20231013172951-967805c26980/go.mod h1:mnY51YOHnunmFqXohzaENinu+iZVDQbKgPTyET18Spo=
+github.com/marioevz/blobber v0.0.0-20231013193543-dd43c5923703 h1:qO7U5BKB+UkJpxmi3tfbYmBGF2aAO1uc4dl5Lj/Lbbs=
+github.com/marioevz/blobber v0.0.0-20231013193543-dd43c5923703/go.mod h1:mnY51YOHnunmFqXohzaENinu+iZVDQbKgPTyET18Spo=
+github.com/marioevz/blobber v0.0.0-20231013232111-f21760e5dd98 h1:Lm4pfygjp7GTwiFlL1Ha1sBbCDruCckQJ3h4HnZSWTY=
+github.com/marioevz/blobber v0.0.0-20231013232111-f21760e5dd98/go.mod h1:mnY51YOHnunmFqXohzaENinu+iZVDQbKgPTyET18Spo=
 github.com/marioevz/eth-clients v0.0.0-20230925201418-d5fbddd99b76 h1:fj+aeR3YLmSRUWjOGgTxNMdvzm72J5JbKGKosNO/jkE=
 github.com/marioevz/eth-clients v0.0.0-20230925201418-d5fbddd99b76/go.mod h1:YVrdn57Q3rAzm3wus4T9tg1vMPca4csVbzorPhkGCW0=
 github.com/marioevz/eth-clients v0.0.0-20231012191302-f85f98699640 h1:xHLAjLkQlO/Wh/Fmr740s+rXGxaYBdTbr5s7FWgwtiQ=
