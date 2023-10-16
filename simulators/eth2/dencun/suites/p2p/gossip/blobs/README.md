@@ -7,3 +7,5 @@ To run locally use:
 ```
 
 ## Test Cases
+
+See ./tests.go

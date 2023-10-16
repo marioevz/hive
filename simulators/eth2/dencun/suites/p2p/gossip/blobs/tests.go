@@ -120,7 +120,8 @@ func init() {
 			BaseTestSpec: suite_base.BaseTestSpec{
 				Name: "test-blob-gossiping-conflicting-blobs",
 				Description: `
-		Test chain health where there are conflicting blobs broadcasted to different clients, all with correct signatures and pointing to the correct block root
+		Test chain health where there are conflicting blobs (same blob index) broadcasted to different clients at the same time,
+		all with correct signatures and pointing to the correct block root.
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
