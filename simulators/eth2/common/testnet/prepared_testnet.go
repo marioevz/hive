@@ -224,20 +224,25 @@ func prepareTestnet(
 			executionGenesis.Hash,
 		),
 	}
+	beaconParams := hivesim.Params{
+		"HIVE_CHECK_LIVE_PORT": fmt.Sprintf(
+			"%d",
+			beacon_client.PortBeaconAPI,
+		),
+		"HIVE_ETH2_MERGE_ENABLED": "1",
+		"HIVE_ETH2_ETH1_GENESIS_TIME": fmt.Sprintf(
+			"%d",
+			executionGenesis.Genesis.Timestamp,
+		),
+		"HIVE_ETH2_GENESIS_FORK": config.GenesisBeaconFork(),
+	}
+	if config.DisablePeerScoring {
+		beaconParams["HIVE_ETH2_DISABLE_PEER_SCORING"] = "1"
+	}
+
 	beaconOpts := hivesim.Bundle(
 		commonOpts,
-		hivesim.Params{
-			"HIVE_CHECK_LIVE_PORT": fmt.Sprintf(
-				"%d",
-				beacon_client.PortBeaconAPI,
-			),
-			"HIVE_ETH2_MERGE_ENABLED": "1",
-			"HIVE_ETH2_ETH1_GENESIS_TIME": fmt.Sprintf(
-				"%d",
-				executionGenesis.Genesis.Timestamp,
-			),
-			"HIVE_ETH2_GENESIS_FORK": config.GenesisBeaconFork(),
-		},
+		beaconParams,
 		stateOpt,
 		consensusConfigOpts,
 		optimisticSync,

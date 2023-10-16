@@ -43,6 +43,9 @@ type Config struct {
 	InitialBaseFeePerGas     *big.Int                               `json:"initial_base_fee_per_gas,omitempty"`
 	GenesisExecutionAccounts map[common.Address]core.GenesisAccount `json:"genesis_execution_accounts,omitempty"`
 
+	// Consensus Layer specific config
+	DisablePeerScoring bool `json:"disable_peer_scoring,omitempty"`
+
 	// Builders
 	EnableBuilders bool                  `json:"enable_builders,omitempty"`
 	BuilderOptions []mock_builder.Option `json:"builder_options,omitempty"`
