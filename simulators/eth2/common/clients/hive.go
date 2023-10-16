@@ -70,6 +70,13 @@ func (h *HiveManagedClient) GetIP() net.IP {
 	return h.hiveClient.IP
 }
 
+func (h *HiveManagedClient) GetHost() string {
+	if h.hiveClient == nil {
+		return ""
+	}
+	return h.hiveClient.IP.String()
+}
+
 func (h *HiveManagedClient) Shutdown() error {
 	if err := h.T.Sim.StopClient(h.T.SuiteID, h.T.TestID, h.hiveClient.Container); err != nil {
 		return err

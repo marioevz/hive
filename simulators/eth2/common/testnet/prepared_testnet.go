@@ -574,7 +574,7 @@ func (p *PreparedTestnet) prepareValidatorClient(
 		}
 		// Hook up validator to beacon node
 		bnAPIOpt := hivesim.Params{
-			"HIVE_ETH2_BN_API_IP": bn.GetIP().String(),
+			"HIVE_ETH2_BN_API_IP": bn.GetHost(),
 		}
 		if testnet.blobber != nil {
 			simIP, err := testnet.T.Sim.ContainerNetworkIP(
