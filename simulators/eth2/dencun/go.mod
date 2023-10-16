@@ -7,7 +7,7 @@ require (
 	github.com/ethereum/hive v0.0.0-20230313141339-8e3200bfc09e
 	github.com/ethereum/hive/simulators/eth2/common v0.0.0-20230316220410-1364352c32a6
 	github.com/ethereum/hive/simulators/ethereum/engine v0.0.0-20230912233535-da792c2fb747
-	github.com/marioevz/blobber v0.0.0-20231013232111-f21760e5dd98
+	github.com/marioevz/blobber v0.0.0-20231016145908-ef413e96ba0f
 	github.com/marioevz/eth-clients v0.0.0-20231012191302-f85f98699640
 	github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d
 	github.com/protolambda/eth2api v0.0.0-20230316214135-5f8afbd6d05d
