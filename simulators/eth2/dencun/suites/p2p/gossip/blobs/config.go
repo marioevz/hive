@@ -42,6 +42,8 @@ func (ts P2PBlobsGossipTestSpec) GetTestnetConfig(
 		blobber_config.WithMaxDevP2PSessionReuses(0), // Always reuse the same peer id
 	}
 
+	config.DisablePeerScoring = true
+
 	return config
 }
 
