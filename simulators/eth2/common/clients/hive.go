@@ -16,6 +16,7 @@ type HiveManagedClient struct {
 	T                    *hivesim.T
 	OptionsGenerator     HiveOptionsGenerator
 	HiveClientDefinition *hivesim.ClientDefinition
+	Port                 int64
 
 	hiveClient        *hivesim.Client
 	extraStartOptions []hivesim.StartOption
@@ -61,6 +62,16 @@ func (h *HiveManagedClient) AddStartOption(opts ...interface{}) {
 			h.extraStartOptions = append(h.extraStartOptions, o)
 		}
 	}
+}
+
+func (h *HiveManagedClient) GetAddress() string {
+	if h.hiveClient == nil {
+		return ""
+	}
+	if h.Port > 0 {
+		return fmt.Sprintf("http://%s:%d", h.hiveClient.IP, h.Port)
+	}
+	return fmt.Sprintf("http://%s", h.hiveClient.IP)
 }
 
 func (h *HiveManagedClient) GetIP() net.IP {

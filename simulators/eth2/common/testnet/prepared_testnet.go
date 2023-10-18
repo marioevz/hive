@@ -303,6 +303,7 @@ func (p *PreparedTestnet) prepareExecutionNode(
 	cm := &clients.HiveManagedClient{
 		T:                    testnet.T,
 		HiveClientDefinition: eth1Def,
+		Port:                 exec_client.PortEngineRPC,
 	}
 
 	// This method will return the options used to run the client.
@@ -397,6 +398,7 @@ func (p *PreparedTestnet) prepareBeaconNode(
 	cm := &clients.HiveManagedClient{
 		T:                    testnet.T,
 		HiveClientDefinition: beaconDef,
+		Port:                 int64(config.BeaconAPIPort),
 	}
 
 	cl := &beacon_client.BeaconClient{
@@ -591,7 +593,7 @@ func (p *PreparedTestnet) prepareValidatorClient(
 				panic(err)
 			}
 
-			p := testnet.blobber.AddBeaconClient(bn)
+			p := testnet.blobber.AddBeaconClient(bn, true)
 			bnAPIOpt = bnAPIOpt.Set(
 				"HIVE_ETH2_BN_API_IP",
 				simIP,
