@@ -650,8 +650,12 @@ github.com/marioevz/blobber v0.0.0-20231017001131-98ec5b4418db h1:N7z1sCXrWbqERz
 github.com/marioevz/blobber v0.0.0-20231017001131-98ec5b4418db/go.mod h1:4KKM/wJnfepAcA5drmYJR3yo2S5y71fEpWUNjRWl9cE=
 github.com/marioevz/blobber v1.0.1-0.20231017235901-4b61d2f707f6 h1:7ySAu4/nVbyI/H3vu8bXaAHZk1G3Say8etOfqfStZkI=
 github.com/marioevz/blobber v1.0.1-0.20231017235901-4b61d2f707f6/go.mod h1:NA9+YfFN+4J+XqF4ZrYeyVrecpgLP9g7AKNhuWZS0Pw=
+github.com/marioevz/blobber v1.0.2-0.20231018234140-0328b345418f h1:AUmr6GYDn0g73+J7rpAB6PoaabObdf75x/EgIpKzkLw=
+github.com/marioevz/blobber v1.0.2-0.20231018234140-0328b345418f/go.mod h1:89IF0AFhYFLaAnOZGns6dhQtcrWmLhMewphDS4rja6o=
 github.com/marioevz/eth-clients v0.0.0-20231017212906-3eb860cb47f0 h1:W3k/7tb8DQpusbjcpS8GkBOuGfydJncwIwzR730UBrE=
 github.com/marioevz/eth-clients v0.0.0-20231017212906-3eb860cb47f0/go.mod h1:YVrdn57Q3rAzm3wus4T9tg1vMPca4csVbzorPhkGCW0=
+github.com/marioevz/eth-clients v0.0.0-20231018141729-9f6835ddc56b h1:5d9Vxr9TJItkL1BTwAmzdmU6F6vl/pFfM2IHQ5NrIhE=
+github.com/marioevz/eth-clients v0.0.0-20231018141729-9f6835ddc56b/go.mod h1:YVrdn57Q3rAzm3wus4T9tg1vMPca4csVbzorPhkGCW0=
 github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033 h1:sn57n+lbJrLS8FKYs08W7TEzraTGOCQGrSC4hni6rYw=
 github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033/go.mod h1:hcwWCT4sF1X7KsMZ535MvDZVk5M20Uyj+x2LARZjQsM=
 github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d h1:MKDrztpuiYtlG8MpW7wES2f37bEevR5F1ziR2x8VzfA=

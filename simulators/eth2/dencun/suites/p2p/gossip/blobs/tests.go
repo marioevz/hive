@@ -52,6 +52,21 @@ func init() {
 			},
 		},
 		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.BlobGossipDelay{
+				DelayMilliseconds: 6000,
+			},
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "test-blob-gossiping-one-slot-delay",
+				Description: `
+		Test chain health where the blobs are gossiped after the block with a 6s delay
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			// A slot might be missed due to blobs arriving late
+			BlobberActionCausesMissedSlot: true,
+		},
+		P2PBlobsGossipTestSpec{
 			BaseTestSpec: suite_base.BaseTestSpec{
 				Name: "test-blob-gossiping-extra-blob",
 				Description: `
@@ -120,13 +135,29 @@ func init() {
 			BaseTestSpec: suite_base.BaseTestSpec{
 				Name: "test-blob-gossiping-conflicting-blobs",
 				Description: `
-		Test chain health where there are conflicting blobs (same blob index) broadcasted to different clients at the same time,
+		Test chain health where there is a single conflicting blob (same blob index) broadcasted to different clients at the same time,
 		all with correct signatures and pointing to the correct block root.
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
 			},
 			BlobberSlotAction: blobber_slot_actions.ConflictingBlobs{},
+			// The blobs do not break any rejection rules
+			BlobberActionCausesMissedSlot: false,
+		},
+		P2PBlobsGossipTestSpec{
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "test-blob-gossiping-max-conflicting-blobs",
+				Description: `
+		Test chain health where there are conflicting blobs (same blob index) broadcasted to different clients at the same time,
+		all with correct signatures and pointing to the correct block root.
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			BlobberSlotAction: blobber_slot_actions.ConflictingBlobs{
+				ConflictingBlobsCount: 6,
+			},
 			// The blobs do not break any rejection rules
 			BlobberActionCausesMissedSlot: false,
 		},
