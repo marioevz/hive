@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/herumi/bls-eth-go-binary v1.29.1
 	github.com/holiman/uint256 v1.2.3
-	github.com/marioevz/blobber v1.0.2-0.20231018234140-0328b345418f
+	github.com/marioevz/blobber v1.0.3-0.20231019235423-4948cd7cac10
 	github.com/marioevz/eth-clients v0.0.0-20231018141729-9f6835ddc56b
 	github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d
 	github.com/pkg/errors v0.9.1
@@ -20,7 +20,7 @@ require (
 	github.com/rauljordan/engine-proxy v0.0.0-20230316220057-4c80c36c4c3a
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/wealdtech/go-eth2-util v1.8.1
-	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -39,14 +39,15 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/pebble v0.0.0-20230906160148-46873a6a7a06 // indirect
+	github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
+	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
-	github.com/consensys/gnark-crypto v0.10.0 // indirect
+	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/crate-crypto/go-kzg-4844 v0.3.0 // indirect
+	github.com/crate-crypto/go-kzg-4844 v0.6.1-0.20231019121413-3621cc59f0c7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set/v2 v2.3.0 // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ethereum/c-kzg-4844 v0.3.1 // indirect
+	github.com/ethereum/c-kzg-4844 v0.3.2-0.20231019020040-748283cced54 // indirect
 	github.com/ferranbt/fastssz v0.1.3 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -183,16 +184,16 @@ require (
 	go.uber.org/fx v1.19.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/term v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.9.1 // indirect
+	golang.org/x/tools v0.13.0 // indirect
 	google.golang.org/api v0.44.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
