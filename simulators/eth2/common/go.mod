@@ -215,3 +215,5 @@ require (
 replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230927204959-21993eae2d9f
 
 replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033
+
+replace github.com/ethereum/go-ethereum => github.com/lightclient/go-ethereum v1.10.10-0.20231019143932-4d161dee0c4c
