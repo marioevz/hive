@@ -583,6 +583,10 @@ func (p *PreparedTestnet) prepareValidatorClient(
 		bnAPIOpt := hivesim.Params{
 			"HIVE_ETH2_BN_API_IP": bn.GetHost(),
 		}
+		bnAPIOpt = bnAPIOpt.Set(
+			"HIVE_ETH2_BN_API_PORT",
+			fmt.Sprintf("%d", bn.Config.BeaconAPIPort),
+		)
 		if testnet.blobber != nil {
 			simIP, err := testnet.T.Sim.ContainerNetworkIP(
 				testnet.T.SuiteID,
