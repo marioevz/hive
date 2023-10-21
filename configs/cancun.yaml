@@ -46,23 +46,23 @@
   nametag: deneb
   build_args:
       baseimage: ethpandaops/prysm
-      tag: develop-linux-amd64
+      tag: devnet-10-linux-amd64
 - client: prysm-vc
   nametag: deneb
   build_args:
       baseimage: ethpandaops/prysm-validator
-      tag: develop-linux-amd64
+      tag: devnet-10-linux-amd64
 
 - client: lighthouse-bn
   nametag: deneb
   build_args:
-      baseimage: sigp/lighthouse
-      tag: deneb-modern
+      baseimage: ethpandaops/lighthouse
+      tag: devnet-10-linux-amd64
 - client: lighthouse-vc
   nametag: deneb
   build_args:
-      baseimage: sigp/lighthouse
-      tag: deneb-modern
+      baseimage: ethpandaops/lighthouse
+      tag: devnet-10-linux-amd64
 
 - client: lodestar-bn
   nametag: deneb
