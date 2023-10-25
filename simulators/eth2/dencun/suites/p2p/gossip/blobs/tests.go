@@ -161,6 +161,22 @@ func init() {
 			// The blobs do not break any rejection rules
 			BlobberActionCausesMissedSlot: false,
 		},
+		P2PBlobsGossipTestSpec{
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "test-gossiping-incorrectly-indexed-blobs",
+				Description: `
+		Test chain health where there are blobs with incorrect indexes broadcasted to the network,
+		all with correct signatures and pointing to the correct block root.
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			BlobberSlotAction: blobber_slot_actions.SwapBlobs{
+				SplitNetwork: false,
+			},
+			// The blobs must be rejected as they are incorrectly indexed
+			BlobberActionCausesMissedSlot: true,
+		},
 	)
 }
 

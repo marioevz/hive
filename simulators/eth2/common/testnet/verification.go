@@ -437,13 +437,19 @@ func (t *Testnet) VerifyBlobs(
 
 		refSidecars, err := beaconClients[0].BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
 		if err != nil {
-			continue
+			return 0, fmt.Errorf(
+				"node %d (%s): failed to retrieve blobs for slot %d: %v",
+				0,
+				t.VerificationNodes().Running()[0].ClientNames(),
+				slot,
+				err,
+			)
 		}
 		blobCount += uint64(len(refSidecars))
 
 		if len(refSidecars) != len(blockKzgCommitments) {
 			return 0, fmt.Errorf(
-				"node %d (%s): block kzg commitments and sidecars lenght differ (sidecar count=%d, block kzg commitments=%d)",
+				"node %d (%s): block kzg commitments and sidecars length differ (sidecar count=%d, block kzg commitments=%d)",
 				0,
 				t.VerificationNodes().Running()[0].ClientNames(),
 				len(refSidecars),
@@ -487,7 +493,7 @@ func (t *Testnet) VerifyBlobs(
 		}
 		if executionBlockHashesCount != len(blockKzgCommitments) {
 			return 0, fmt.Errorf(
-				"node %d (%s): block kzg commitments and execution block hashes lenght differ (block kzg commitment count=%d, execution block hash count=%d)",
+				"node %d (%s): block kzg commitments and execution block hashes length differ (block kzg commitment count=%d, execution block hash count=%d)",
 				0,
 				t.VerificationNodes().Running()[0].ClientNames(),
 				len(blockKzgCommitments),

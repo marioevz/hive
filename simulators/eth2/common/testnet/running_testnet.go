@@ -144,6 +144,10 @@ func (t *Testnet) ExecutionGenesis() *core.Genesis {
 	return t.executionGenesis.Genesis
 }
 
+func (t *Testnet) Blobber() *blobber.Blobber {
+	return t.blobber
+}
+
 func StartTestnet(
 	parentCtx context.Context,
 	t *hivesim.T,
@@ -459,7 +463,6 @@ func (t *Testnet) WaitSlotsWithMaxMissedSlots(ctx context.Context, slots common.
 						utils.Shorten(checkpoints.CurrentJustified.String()),
 						utils.Shorten(checkpoints.Finalized.String()),
 					)
-
 				}(ctx, n, results[i])
 			}
 			wg.Wait()
