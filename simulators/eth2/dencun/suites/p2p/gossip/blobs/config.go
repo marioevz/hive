@@ -17,12 +17,21 @@ type P2PBlobsGossipTestSpec struct {
 
 	BlobberSlotAction             blobber_slot_actions.SlotAction
 	BlobberActionCausesMissedSlot bool
+
+	MaxMissedSlots beacon.Slot
 }
 
 const (
 	WAIT_EPOCHS_AFTER_FORK = 1
 	MAX_MISSED_SLOTS       = 3
 )
+
+func (ts P2PBlobsGossipTestSpec) GetMaxMissedSlots() beacon.Slot {
+	if ts.MaxMissedSlots > 0 {
+		return ts.MaxMissedSlots
+	}
+	return MAX_MISSED_SLOTS
+}
 
 func (ts P2PBlobsGossipTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
@@ -55,7 +64,7 @@ func (ts P2PBlobsGossipTestSpec) ExecutePostForkWait(t *hivesim.T,
 ) {
 	// By default all blobber tests simply wait an epoch with a max amount of missed slots to check that the chain doesn't stall
 	epochsAfterFork := WAIT_EPOCHS_AFTER_FORK
-	maxMissedSlots := beacon.Slot(MAX_MISSED_SLOTS)
+	maxMissedSlots := ts.GetMaxMissedSlots()
 
 	if err := testnet.WaitSlotsWithMaxMissedSlots(ctx, beacon.Slot(epochsAfterFork)*testnet.Spec().SLOTS_PER_EPOCH, maxMissedSlots); err != nil {
 		t.Fatalf("FAIL: error waiting for %d epochs after fork: %v", beacon.Slot(epochsAfterFork), err)
