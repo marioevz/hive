@@ -47,6 +47,30 @@ func (ts BuilderTestSpec) ExecutePostFork(
 	}
 }
 
+func (ts BuilderTestSpec) InvalidPayloadCaughtBeforeReveal() bool {
+	if ts.ErrorOnHeaderRequest {
+		// An error on header request to the builder should fallback to local block production,
+		// and hence there isn't even a blinded payload to process.
+		return true
+	}
+	if ts.InvalidPayloadVersion {
+		// An invalid payload version should be caught by the consensus client
+		// when the built blinded payload is received.
+		return true
+	}
+	if ts.InvalidatePayloadAttributes != "" {
+		// An invalid payload attribute modification should be caught by the consensus client
+		// when the built blinded payload is received most of the times.
+		if ts.InvalidatePayloadAttributes != mock_builder.INVALIDATE_ATTR_BEACON_ROOT {
+			// Invalid Beacon Root is special because the modified value is not in the response,
+			// and hence can only be detected by the consensus client after the payload is
+			// revealed and executed.
+			return true
+		}
+	}
+	return false
+}
+
 func (ts BuilderTestSpec) Verify(
 	t *hivesim.T,
 	ctx context.Context,
@@ -184,7 +208,7 @@ func (ts BuilderTestSpec) Verify(
 		}
 
 		var max_missed_slots uint64 = 0
-		if ts.ErrorOnHeaderRequest || ts.InvalidPayloadVersion || ts.InvalidatePayloadAttributes != "" {
+		if ts.InvalidPayloadCaughtBeforeReveal() {
 			// These errors should be caught by the CL client when the built blinded
 			// payload is received. Hence, a low number of missed slots is expected.
 			max_missed_slots = 1
