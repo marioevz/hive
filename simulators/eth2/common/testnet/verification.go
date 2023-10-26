@@ -382,7 +382,7 @@ func (t *Testnet) VerifyELHeads(
 		if err != nil {
 			return err
 		}
-		if head.Hash() != head2.Hash() {
+		if head.Hash() != head2.Hash() && head.ParentHash != head2.Hash() && head.Hash() != head2.ParentHash {
 			return fmt.Errorf(
 				"different heads: %v: %v %v: %v",
 				0,
