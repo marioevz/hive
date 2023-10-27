@@ -44,6 +44,8 @@ func SuiteHydrate(
 			),
 			Description: test.GetDescription(),
 			Run: func(t *hivesim.T) {
+				t.Logf("Starting test: %s", test.GetName())
+				defer t.Logf("Finished test: %s", test.GetName())
 				keys := test.GetValidatorKeys(mnemonic)
 				secrets, err := consensus_config.SecretKeys(keys)
 				if err != nil {
