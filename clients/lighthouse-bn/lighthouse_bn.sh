@@ -92,6 +92,7 @@ lighthouse \
     --target-peers="${HIVE_ETH2_P2P_TARGET_PEERS:-10}" \
     --trusted-peers="$trustedpeers" \
     --subscribe-all-subnets \
+    --enable-private-discovery \
     --boot-nodes="${HIVE_ETH2_BOOTNODE_ENRS:-""}" \
     --max-skip-slots="${HIVE_ETH2_MAX_SKIP_SLOTS:-1000}" \
     --http --http-address=0.0.0.0 --http-port="${HIVE_ETH2_BN_API_PORT:-4000}" --http-allow-origin="*"
