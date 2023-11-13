@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/hive/simulators/eth2/common/utils"
 	"github.com/marioevz/blobber"
 	blobber_config "github.com/marioevz/blobber/config"
+	"github.com/marioevz/blobber/keys"
 	beacon_client "github.com/marioevz/eth-clients/clients/beacon"
 	exec_client "github.com/marioevz/eth-clients/clients/execution"
 	node "github.com/marioevz/eth-clients/clients/node"
@@ -187,12 +188,11 @@ func StartTestnet(
 	}
 
 	if config.EnableBlobber {
-		blobberKeys := make([]*blobber_config.ValidatorKey, 0)
+		blobberKeys := make([]*keys.ValidatorKey, 0)
 		for _, key := range env.Keys {
-			blobberKeys = append(blobberKeys, &blobber_config.ValidatorKey{
-				ValidatorPubkey:    key.ValidatorPubkey,
-				ValidatorSecretKey: key.ValidatorSecretKey,
-			})
+			validator := new(keys.ValidatorKey)
+			validator.FromBytes(key.ValidatorSecretKey[:])
+			blobberKeys = append(blobberKeys, validator)
 		}
 
 		blobberOpts := []blobber_config.Option{

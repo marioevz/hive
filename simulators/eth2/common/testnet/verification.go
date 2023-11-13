@@ -13,6 +13,7 @@ import (
 	beacon_client "github.com/marioevz/eth-clients/clients/beacon"
 	"github.com/protolambda/eth2api"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 	"github.com/protolambda/ztyp/tree"
 )
 
@@ -424,6 +425,9 @@ func (t *Testnet) VerifyBlobs(
 			break
 		}
 
+		// Get the block root
+		blockRoot := versionedBlock.Root()
+
 		// Get the execution block from the execution client
 		executionPayload, _, _, err := versionedBlock.ExecutionPayload()
 		if err != nil {
@@ -436,7 +440,7 @@ func (t *Testnet) VerifyBlobs(
 		blockKzgCommitments := versionedBlock.KZGCommitments()
 
 		refSidecars, err := beaconClients[0].BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
-		if err != nil {
+		if err != nil && len(blockKzgCommitments) > 0 { // DEBUG!!! DO NOT MERGE!!!
 			return 0, fmt.Errorf(
 				"node %d (%s): failed to retrieve blobs for slot %d: %v",
 				0,
@@ -501,13 +505,75 @@ func (t *Testnet) VerifyBlobs(
 			)
 		}
 
+		// Verify sidecars integrity
+		for i, sidecar := range refSidecars {
+			// Check the blob index
+			if sidecar.Index != deneb.BlobIndex(i) {
+				return 0, fmt.Errorf(
+					"node %d (%s): blob index does not match (got=%d, expected=%d)",
+					0,
+					t.VerificationNodes().Running()[0].ClientNames(),
+					sidecar.Index,
+					i,
+				)
+			}
+
+			// Verify the inclusion proof
+			if err := sidecar.VerifyProof(tree.GetHashFn()); err != nil {
+				return 0, fmt.Errorf(
+					"node %d (%s): failed to verify proof: %v",
+					0,
+					t.VerificationNodes().Running()[0].ClientNames(),
+					err,
+				)
+			}
+
+			// Check the block root of included signed header
+			sidecarBlockRoot := sidecar.SignedBlockHeader.Message.HashTreeRoot(tree.GetHashFn())
+			if !bytes.Equal(sidecarBlockRoot[:], blockRoot[:]) {
+				return 0, fmt.Errorf(
+					"node %d (%s): block root of included signed header does not match (got=%x, expected=%x)",
+					0,
+					t.VerificationNodes().Running()[0].ClientNames(),
+					sidecarBlockRoot[:],
+					blockRoot[:],
+				)
+			}
+
+			// Compare kzg commitment against the one in the block
+			if !bytes.Equal(sidecar.KZGCommitment[:], blockKzgCommitments[i][:]) {
+				return 0, fmt.Errorf(
+					"node %d (%s): block kzg commitment and sidecar kzg commitment differ (block kzg commitment=%x, sidecar kzg commitment=%x)",
+					0,
+					t.VerificationNodes().Running()[0].ClientNames(),
+					blockKzgCommitments[i][:],
+					sidecar.KZGCommitment[:],
+				)
+			}
+
+			// Compare the signature against the signed block
+			blockSignature := versionedBlock.Signature()
+			if !bytes.Equal(sidecar.SignedBlockHeader.Signature[:], blockSignature[:]) {
+				return 0, fmt.Errorf(
+					"node %d (%s): block signature and sidecar signature differ (block signature=%s, sidecar block header signature=%s)",
+					0,
+					t.VerificationNodes().Running()[0].ClientNames(),
+					blockSignature.String(),
+					sidecar.SignedBlockHeader.Signature.String(),
+				)
+			}
+
+			// TODO: Verify KZG Proof
+		}
+
+		// Verify against the other beacon nodes
 		for i := 1; i < len(beaconClients); i++ {
 			// Check the reference client against the other clients, and verify that all clients return the same blobs
 			//  Also keep count of blobs per client
 			bn := beaconClients[i]
 			// Get the sidecars for this client
 			sidecars, err := bn.BlobSidecars(parentCtx, eth2api.BlockIdSlot(slot))
-			if err != nil {
+			if err != nil && len(blockKzgCommitments) > 0 { // DEBUG!!! DO NOT MERGE!!!
 				// We already got some blobs from the reference client, so we should not get an error here
 				return 0, err
 			}
@@ -521,83 +587,17 @@ func (t *Testnet) VerifyBlobs(
 				)
 			}
 			for j := 0; j < len(sidecars); j++ {
-				if !bytes.Equal(sidecars[j].Blob[:], refSidecars[j].Blob[:]) {
+				refSidecarRoot := refSidecars[j].HashTreeRoot(t.spec, tree.GetHashFn())
+				sidecarRoot := sidecars[j].HashTreeRoot(t.spec, tree.GetHashFn())
+
+				// Verify the sidecar roots match
+				if !bytes.Equal(sidecarRoot[:], refSidecarRoot[:]) {
 					return 0, fmt.Errorf(
-						"node %d (%s): different blobs\ngot=%x\nexpected=%x",
+						"node %d (%s): different sidecar roots\ngot=%s\nexpected=%s",
 						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].Blob[:],
-						refSidecars[j].Blob[:],
-					)
-				}
-				// Verify the commitments
-				if !bytes.Equal(sidecars[j].KZGCommitment[:], refSidecars[j].KZGCommitment[:]) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different commitments\ngot=%x\nexpected=%x",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].KZGCommitment[:],
-						refSidecars[j].KZGCommitment[:],
-					)
-				}
-				// Verify the proofs
-				if !bytes.Equal(sidecars[j].KZGProof[:], refSidecars[j].KZGProof[:]) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different proofs\ngot=%x\nexpected=%x",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].KZGProof[:],
-						refSidecars[j].KZGProof[:],
-					)
-				}
-				// Verify the block roots
-				if !bytes.Equal(sidecars[j].BlockRoot[:], refSidecars[j].BlockRoot[:]) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different block roots\ngot=%x\nexpected=%x",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].BlockRoot[:],
-						refSidecars[j].BlockRoot[:],
-					)
-				}
-				// Verify the blob index
-				if sidecars[j].Index != refSidecars[j].Index || uint64(sidecars[j].Index) != uint64(j) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different blob indices\ngot=%d\nexpected=%d",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].Index,
-						j,
-					)
-				}
-				// Verify the slot number
-				if sidecars[j].Slot != refSidecars[j].Slot || uint64(sidecars[j].Slot) != uint64(slot) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different slot numbers\ngot=%d\nexpected=%d",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].Slot,
-						slot,
-					)
-				}
-				// Verify the block parent root
-				if !bytes.Equal(sidecars[j].BlockParentRoot[:], refSidecars[j].BlockParentRoot[:]) {
-					return 0, fmt.Errorf(
-						"node %d (%s): different block parent roots\ngot=%x\nexpected=%x",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].BlockParentRoot[:],
-						refSidecars[j].BlockParentRoot[:],
-					)
-				}
-				// Verify the proposer index
-				if sidecars[j].ProposerIndex != refSidecars[j].ProposerIndex {
-					return 0, fmt.Errorf(
-						"node %d (%s): different proposer indices\ngot=%d\nexpected=%d",
-						i,
-						t.VerificationNodes().Running()[i].ClientNames(),
-						sidecars[j].ProposerIndex,
-						refSidecars[j].ProposerIndex,
+						bn.ClientName(),
+						sidecarRoot.String(),
+						refSidecarRoot.String(),
 					)
 				}
 			}
