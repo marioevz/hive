@@ -9,7 +9,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v1.29.1
 	github.com/holiman/uint256 v1.2.3
 	github.com/marioevz/blobber v1.0.5-0.20231025215107-7fe4c76127a6
-	github.com/marioevz/eth-clients v0.0.0-20231018141729-9f6835ddc56b
+	github.com/marioevz/eth-clients v0.0.0-20231109231251-6f2b2eb9b839
 	github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d
 	github.com/pkg/errors v0.9.1
 	github.com/protolambda/bls12-381-util v0.0.0-20220416220906-d8552aa452c7
@@ -212,8 +212,10 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20230927204959-21993eae2d9f
+replace github.com/protolambda/zrnt => github.com/marioevz/zrnt v0.26.2-0.20231109183115-d2098ec1f42c
 
 replace github.com/protolambda/eth2api => github.com/marioevz/eth2api v0.0.0-20230922201437-72bd1301e033
 
 replace github.com/ethereum/go-ethereum => github.com/lightclient/go-ethereum v1.10.10-0.20231019143932-4d161dee0c4c
+
+replace github.com/protolambda/ztyp => github.com/marioevz/ztyp v0.0.0-20231106221254-dd6f24f13fd9
