@@ -26,6 +26,11 @@ const (
 	MAX_MISSED_SLOTS       = 3
 )
 
+func (ts P2PBlobsGossipTestSpec) GetDescription() string {
+	// Print the base test spec description plus the blobber action description
+	return ts.BaseTestSpec.Description + "\n" + ts.BlobberSlotAction.Description()
+}
+
 func (ts P2PBlobsGossipTestSpec) GetMaxMissedSlots() beacon.Slot {
 	if ts.MaxMissedSlots > 0 {
 		return ts.MaxMissedSlots

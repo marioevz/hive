@@ -20,8 +20,9 @@ var Tests = make([]suites.TestSpec, 0)
 func init() {
 	Tests = append(Tests,
 		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.Default{},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-sanity",
+				Name: "blob-gossiping-sanity",
 				Description: `
 		Sanity test where the blobber is verified to be working correctly
 		`,
@@ -30,9 +31,11 @@ func init() {
 			},
 		},
 		P2PBlobsGossipTestSpec{
-			BlobberSlotAction: blobber_slot_actions.BroadcastBlobsBeforeBlock{},
+			BlobberSlotAction: blobber_slot_actions.Default{
+				BroadcastBlobsFirst: true,
+			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-before-block",
+				Name: "blob-gossiping-before-block",
 				Description: `
 		Test chain health where the blobs are gossiped before the block
 		`,
@@ -45,7 +48,7 @@ func init() {
 				DelayMilliseconds: 500,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-delay",
+				Name: "blob-gossiping-delay",
 				Description: `
 		Test chain health where the blobs are gossiped after the block with a 500ms delay
 		`,
@@ -58,7 +61,7 @@ func init() {
 				DelayMilliseconds: 6000,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-one-slot-delay",
+				Name: "blob-gossiping-one-slot-delay",
 				Description: `
 		Test chain health where the blobs are gossiped after the block with a 6s delay
 		`,
@@ -69,114 +72,66 @@ func init() {
 			BlobberActionCausesMissedSlot: true,
 		},
 		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.EquivocatingBlock{
+				CorrectBlockDelayMilliseconds: 500,
+			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-extra-blob",
+				Name: "equivocating-block",
 				Description: `
-		Test chain health where there is always an extra blob with:
-		 - Correct KZG commitment
-		 - Correct block root
-		 - Correct proposer signature
-		 - Broadcasted after the block
-		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
+		Test chain health a proposer sends an equivocating block before the correct block.
+		Blob sidecars contain the correct block header.
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
 			},
-			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
-				BroadcastBlockFirst:     true,
-				BroadcastExtraBlobFirst: true,
+			// Action should not cause missed slots since the blob sidecars and the block are available
+			BlobberActionCausesMissedSlot: false,
+		},
+		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.EquivocatingBlockAndBlobs{
+				BroadcastBlobsFirst: true,
 			},
-			// Since the extra blob has a correct signature, and comes before the correct blob, the correct blob is ignored
+			BaseTestSpec: suite_base.BaseTestSpec{
+				Name: "equivocating-block-and-blobs",
+				Description: `
+		Test chain health a proposer sends equivocating blobs and block to different peers
+		`,
+				DenebGenesis: true,
+				GenesisExecutionWithdrawalCredentialsShares: 1,
+			},
+			// A slot might be missed due to re-orgs
 			BlobberActionCausesMissedSlot: true,
 		},
+
 		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.EquivocatingBlockHeaderInBlobs{
+				BroadcastBlobsFirst: false,
+			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-extra-blob-with-incorrect-kzg-commitment",
+				Name: "equivocating-block-header-in-blob-sidecars",
 				Description: `
-		Test chain health where there is always an extra blob with:
-		 - Incorrect KZG commitment
-		 - Correct block root
-		 - Correct proposer signature
-		 - Broadcasted after the block
-		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
+		Test chain health a proposer sends equivocating blob sidecars (equivocating block header), but the correct full block is sent first.
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
 			},
-			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
-				BroadcastBlockFirst:     true,
-				BroadcastExtraBlobFirst: true,
-				IncorrectKZGCommitment:  true,
-			},
-			// Since the extra blob has a correct signature, and comes before the correct blob, the correct blob is ignored
+			// Slot is missed because the blob with the correct header are never sent
 			BlobberActionCausesMissedSlot: true,
 		},
+
 		P2PBlobsGossipTestSpec{
+			BlobberSlotAction: blobber_slot_actions.EquivocatingBlockHeaderInBlobs{
+				BroadcastBlobsFirst: true,
+			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-extra-blob-with-incorrect-signature",
+				Name: "equivocating-block-header-in-blob-sidecars-2",
 				Description: `
-		Test chain health where there is always an extra blob with:
-		 - Correct KZG commitment
-		 - Correct block root
-		 - Incorrect proposer signature
-		 - Broadcasted after the block
-		 - Broadcasted before the rest of the blobs (results in correct blob being ignored per spec)
+		Test chain health a proposer sends equivocating blob sidecars (equivocating block header), and the correct full block is sent afterwards.
 		`,
 				DenebGenesis: true,
 				GenesisExecutionWithdrawalCredentialsShares: 1,
 			},
-			BlobberSlotAction: blobber_slot_actions.ExtraBlobs{
-				BroadcastBlockFirst:     true,
-				BroadcastExtraBlobFirst: true,
-				IncorrectSignature:      true,
-			},
-			// TODO: The extra blob has an incorrect signature, so we might get disconnected+banned and unable to send the rest of the blobs
-			BlobberActionCausesMissedSlot: false,
-		},
-		P2PBlobsGossipTestSpec{
-			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-conflicting-blobs",
-				Description: `
-		Test chain health where there is a single conflicting blob (same blob index) broadcasted to different clients at the same time,
-		all with correct signatures and pointing to the correct block root.
-		`,
-				DenebGenesis: true,
-				GenesisExecutionWithdrawalCredentialsShares: 1,
-			},
-			BlobberSlotAction: blobber_slot_actions.ConflictingBlobs{},
-			// The blobs do not break any rejection rules
-			BlobberActionCausesMissedSlot: false,
-		},
-		P2PBlobsGossipTestSpec{
-			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-blob-gossiping-max-conflicting-blobs",
-				Description: `
-		Test chain health where there are conflicting blobs (same blob index) broadcasted to different clients at the same time,
-		all with correct signatures and pointing to the correct block root.
-		`,
-				DenebGenesis: true,
-				GenesisExecutionWithdrawalCredentialsShares: 1,
-			},
-			BlobberSlotAction: blobber_slot_actions.ConflictingBlobs{
-				ConflictingBlobsCount: 6,
-			},
-			// The blobs do not break any rejection rules
-			BlobberActionCausesMissedSlot: false,
-		},
-		P2PBlobsGossipTestSpec{
-			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "test-gossiping-incorrectly-indexed-blobs",
-				Description: `
-		Test chain health where there are blobs with incorrect indexes broadcasted to the network,
-		all with correct signatures and pointing to the correct block root.
-		`,
-				DenebGenesis: true,
-				GenesisExecutionWithdrawalCredentialsShares: 1,
-			},
-			BlobberSlotAction: blobber_slot_actions.SwapBlobs{
-				SplitNetwork: false,
-			},
-			// The blobs must be rejected as they are incorrectly indexed
+			// Slot is missed because the blob with the correct header are never sent
 			BlobberActionCausesMissedSlot: true,
 		},
 	)
