@@ -10,7 +10,9 @@ import (
 
 var testSuite = hivesim.Suite{
 	Name:        "eth2-deneb-p2p-blobs-gossip",
+	DisplayName: "Deneb P2P Blobs Gossip",
 	Description: `Collection of test vectors that verify client behavior under different blob gossiping scenarios.`,
+	Location:    "suites/p2p/gossip/blobs",
 }
 
 var Tests = make([]suites.TestSpec, 0)

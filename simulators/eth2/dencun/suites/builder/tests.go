@@ -10,7 +10,9 @@ import (
 
 var testSuite = hivesim.Suite{
 	Name:        "eth2-deneb-builder",
+	DisplayName: "Deneb Builder",
 	Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet and builder API for Cancun+Deneb.`,
+	Location:    "suites/builder",
 }
 
 var Tests = make([]suites.TestSpec, 0)

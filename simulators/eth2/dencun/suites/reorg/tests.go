@@ -9,7 +9,9 @@ import (
 
 var testSuite = hivesim.Suite{
 	Name:        "eth2-deneb-reorg",
+	DisplayName: "Deneb Reorg",
 	Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Cancun+Deneb and test re-orgs of the beacon chain.`,
+	Location:    "suites/reorg",
 }
 
 var Tests = make([]suites.TestSpec, 0)

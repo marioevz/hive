@@ -9,7 +9,9 @@ import (
 
 var testSuite = hivesim.Suite{
 	Name:        "eth2-deneb-sync",
+	DisplayName: "Deneb Sync",
 	Description: `Collection of test vectors that use a ExecutionClient+BeaconNode+ValidatorClient testnet for Cancun+Deneb and test syncing of the beacon chain.`,
+	Location:    "suites/sync",
 }
 
 var Tests = make([]suites.TestSpec, 0)

@@ -17,6 +17,7 @@ var Deneb string = "deneb"
 type TestSpec interface {
 	GetName() string
 	GetTestnetConfig(clients.NodeDefinitions) *testnet.Config
+	GetDisplayName() string
 	GetDescription() string
 	ExecutePreFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	ExecutePostFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
@@ -42,6 +43,7 @@ func SuiteHydrate(
 				test.GetName(),
 				strings.Join(clientCombinations.ClientTypes(), "-"),
 			),
+			DisplayName: test.GetDisplayName(),
 			Description: test.GetDescription(),
 			Run: func(t *hivesim.T) {
 				t.Logf("Starting test: %s", test.GetName())

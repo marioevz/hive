@@ -3,6 +3,7 @@ package suite_base
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -13,12 +14,14 @@ import (
 	el "github.com/ethereum/hive/simulators/eth2/common/config/execution"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
+	"github.com/lithammer/dedent"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
 type BaseTestSpec struct {
 	// Spec
 	Name        string
+	DisplayName string
 	Description string
 
 	// Testnet Nodes
@@ -81,6 +84,20 @@ var (
 	ChainID = big.NewInt(7)
 )
 
+func (ts BaseTestSpec) GetNodeCount() int {
+	if ts.NodeCount > 0 {
+		return ts.NodeCount
+	}
+	return 2
+}
+
+func (ts BaseTestSpec) GetValidatingNodeCount() int {
+	if ts.ValidatingNodeCount > 0 {
+		return ts.ValidatingNodeCount
+	}
+	return ts.GetNodeCount()
+}
+
 func (ts BaseTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
 ) *testnet.Config {
@@ -90,19 +107,9 @@ func (ts BaseTestSpec) GetTestnetConfig(
 		config.DenebForkEpoch = common.Big0
 	}
 
-	nodeCount := 2
-	if len(allNodeDefinitions) == 0 {
-		panic("incorrect number of node definitions")
-	} else if len(allNodeDefinitions) > 1 {
-		nodeCount = len(allNodeDefinitions)
-	}
-	if ts.NodeCount > 0 {
-		nodeCount = ts.NodeCount
-	}
-	maxValidatingNodeIndex := nodeCount - 1
-	if ts.ValidatingNodeCount > 0 {
-		maxValidatingNodeIndex = ts.ValidatingNodeCount - 1
-	}
+	nodeCount := ts.GetNodeCount()
+
+	maxValidatingNodeIndex := ts.GetValidatingNodeCount() - 1
 	nodeDefinitions := make(clients.NodeDefinitions, 0)
 	for i := 0; i < nodeCount; i++ {
 		n := allNodeDefinitions[i%len(allNodeDefinitions)]
@@ -115,7 +122,6 @@ func (ts BaseTestSpec) GetTestnetConfig(
 	}
 
 	// Fund execution layer account for transactions
-
 	config.GenesisExecutionAccounts = map[common.Address]core.GenesisAccount{
 		CodeContractAddress: {
 			Balance: common.Big0,
@@ -143,8 +149,30 @@ func (ts BaseTestSpec) GetName() string {
 	return ts.Name
 }
 
+func (ts BaseTestSpec) GetDisplayName() string {
+	return ts.DisplayName
+}
+
 func (ts BaseTestSpec) GetDescription() string {
-	return ts.Description
+	sb := strings.Builder{}
+	sb.WriteString(dedent.Dedent(ts.Description))
+	sb.WriteString("\n\n")
+	sb.WriteString("#### Testnet Configuration:\n")
+	sb.WriteString(fmt.Sprintf("  - Node Count: %d\n", ts.GetNodeCount()))
+	sb.WriteString(fmt.Sprintf("  - Validating Node Count: %d\n", ts.GetValidatingNodeCount()))
+	sb.WriteString(fmt.Sprintf("  - Validator Key Count: %d\n", ts.GetValidatorCount()))
+	sb.WriteString(fmt.Sprintf("  - Validator Key per Node: %d\n", ts.GetValidatorCount()/uint64(ts.GetValidatingNodeCount())))
+	if ts.DenebGenesis {
+		sb.WriteString("  - Genesis Fork: Deneb\n")
+	} else {
+		sb.WriteString("  - Genesis Fork: Capella\n")
+	}
+	execCredentialCount := ts.GetExecutionWithdrawalCredentialCount()
+	blsCredentialCount := ts.GetValidatorCount() - execCredentialCount
+	sb.WriteString(fmt.Sprintf("  - Execution Withdrawal Credentials Count: %d\n", execCredentialCount))
+	sb.WriteString(fmt.Sprintf("  - BLS Withdrawal Credentials Count: %d\n", blsCredentialCount))
+
+	return sb.String()
 }
 
 func (ts BaseTestSpec) GetValidatorCount() uint64 {
@@ -152,6 +180,13 @@ func (ts BaseTestSpec) GetValidatorCount() uint64 {
 		return ts.ValidatorCount
 	}
 	return DEFAULT_VALIDATOR_COUNT
+}
+
+func (ts BaseTestSpec) GetExecutionWithdrawalCredentialCount() uint64 {
+	if ts.GenesisExecutionWithdrawalCredentialsShares != 0 {
+		return ts.GetValidatorCount() / uint64(ts.GenesisExecutionWithdrawalCredentialsShares)
+	}
+	return 0
 }
 
 func (ts BaseTestSpec) GetValidatorKeys(
