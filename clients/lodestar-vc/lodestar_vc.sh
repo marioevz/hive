@@ -22,7 +22,7 @@ do
 done
 
 metrics_option=$([[ "$HIVE_ETH2_METRICS_PORT" == "" ]] && echo "" || echo "--metrics --metrics.address=$CONTAINER_IP --metrics.port=$HIVE_ETH2_METRICS_PORT")
-builder_option=$([[ "$HIVE_ETH2_BUILDER_ENDPOINT" == "" ]] && echo "--builder.selection executiononly --useProduceBlockV3" || echo "")
+builder_option=$([[ "$HIVE_ETH2_BUILDER_ENDPOINT" == "" ]] && echo "--builder.selection executiononly" || echo "--builder")
 echo BUILDER=$builder_option
 
 LOG=info
@@ -43,6 +43,7 @@ node /usr/app/node_modules/.bin/lodestar \
     --paramsFile=/hive/input/config.yaml \
     --keystoresDir="/data/validators" \
     --secretsDir="/data/secrets" \
+    --useProduceBlockV3 \
     $metrics_option $builder_option \
     --beaconNodes="http://$HIVE_ETH2_BN_API_IP:$HIVE_ETH2_BN_API_PORT"
 
