@@ -40,7 +40,15 @@
     tag: main
 
 - client: teku-bn
+  nametag: deneb
+  build_args:
+      baseimage: ethpandaops/teku
+      tag: master
 - client: teku-vc
+  nametag: deneb
+  build_args:
+      baseimage: ethpandaops/teku
+      tag: master
 
 - client: prysm-bn
   nametag: deneb
@@ -57,23 +65,23 @@
   nametag: deneb
   build_args:
       baseimage: ethpandaops/lighthouse
-      tag: devnet-10-linux-amd64
+      tag: sidecar-inclusion-proof
 - client: lighthouse-vc
   nametag: deneb
   build_args:
       baseimage: ethpandaops/lighthouse
-      tag: devnet-10-linux-amd64
+      tag: sidecar-inclusion-proof
 
 - client: lodestar-bn
   nametag: deneb
   build_args:
       baseimage: ethpandaops/lodestar
-      tag: deneb-builder
+      tag: blobs-inclproof
 - client: lodestar-vc
   nametag: deneb
   build_args:
       baseimage: ethpandaops/lodestar
-      tag: deneb-builder
+      tag: blobs-inclproof
 
 - client: nimbus-bn
 - client: nimbus-vc
