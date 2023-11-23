@@ -3,13 +3,14 @@ module github.com/ethereum/hive/simulators/eth2/dencun
 go 1.20
 
 require (
-	github.com/ethereum/go-ethereum v1.13.2
-	github.com/ethereum/hive v0.0.0-20230919110229-d58aec4a3eb5
+	github.com/ethereum/go-ethereum v1.13.5-0.20231031113925-bc42e88415d3
+	github.com/ethereum/hive v0.0.0-20231121215939-dcb91dbfc549
 	github.com/ethereum/hive/simulators/eth2/common v0.0.0-20230316220410-1364352c32a6
 	github.com/ethereum/hive/simulators/ethereum/engine v0.0.0-20231019225633-d252d81aded0
-	github.com/marioevz/blobber v1.0.5-0.20231025215107-7fe4c76127a6
-	github.com/marioevz/eth-clients v0.0.0-20231109194635-57f8022c3c02
-	github.com/marioevz/mock-builder v1.1.1-0.20230920235938-1f29ea279d7d
+	github.com/lithammer/dedent v1.1.0
+	github.com/marioevz/blobber v1.0.5-0.20231123175710-9e2c13d3d458
+	github.com/marioevz/eth-clients v0.0.0-20231123180401-b4230c802498
+	github.com/marioevz/mock-builder v1.1.1-0.20231123171249-08b59e943190
 	github.com/protolambda/eth2api v0.0.0-20230316214135-5f8afbd6d05d
 	github.com/protolambda/zrnt v0.30.0
 	github.com/protolambda/ztyp v0.2.2
@@ -52,13 +53,13 @@ require (
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/crate-crypto/go-kzg-4844 v0.6.1-0.20231019121413-3621cc59f0c7 // indirect
+	github.com/crate-crypto/go-kzg-4844 v0.7.0 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set/v2 v2.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ethereum/c-kzg-4844 v0.3.2-0.20231019020040-748283cced54 // indirect
+	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/getsentry/sentry-go v0.20.0 // indirect
@@ -76,7 +77,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.2 // indirect
 	github.com/herumi/bls-eth-go-binary v1.28.1 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
@@ -105,6 +105,7 @@ require (
 	github.com/libp2p/go-reuseport v0.2.0 // indirect
 	github.com/libp2p/go-yamux/v4 v4.0.0 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/dns v1.1.53 // indirect
@@ -124,7 +125,7 @@ require (
 	github.com/multiformats/go-multistream v0.4.1 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.2 // indirect
-	github.com/opencontainers/runtime-spec v1.0.2 // indirect
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
@@ -133,7 +134,6 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/protolambda/go-keystorev4 v0.0.0-20211007151826-f20444f6d564 // indirect
 	github.com/prysmaticlabs/fastssz v0.0.0-20221107182844-78142813af44 // indirect
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.3-alpha // indirect
 	github.com/prysmaticlabs/prysm/v4 v4.1.0-alpha.1 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
@@ -166,9 +166,10 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
-	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
-	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
+	gopkg.in/inconshreveable/log15.v2 v2.0.0-20200109203555-b30bc20e4fd1 // indirect
+	k8s.io/client-go v0.22.5 // indirect
+	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect

@@ -3,7 +3,6 @@ package suite_base
 import (
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -13,8 +12,8 @@ import (
 	cl "github.com/ethereum/hive/simulators/eth2/common/config/consensus"
 	el "github.com/ethereum/hive/simulators/eth2/common/config/execution"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
+	"github.com/ethereum/hive/simulators/eth2/dencun/helper"
 	"github.com/ethereum/hive/simulators/ethereum/engine/globals"
-	"github.com/lithammer/dedent"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
@@ -153,26 +152,42 @@ func (ts BaseTestSpec) GetDisplayName() string {
 	return ts.DisplayName
 }
 
-func (ts BaseTestSpec) GetDescription() string {
-	sb := strings.Builder{}
-	sb.WriteString(dedent.Dedent(ts.Description))
-	sb.WriteString("\n\n")
-	sb.WriteString("#### Testnet Configuration:\n")
-	sb.WriteString(fmt.Sprintf("  - Node Count: %d\n", ts.GetNodeCount()))
-	sb.WriteString(fmt.Sprintf("  - Validating Node Count: %d\n", ts.GetValidatingNodeCount()))
-	sb.WriteString(fmt.Sprintf("  - Validator Key Count: %d\n", ts.GetValidatorCount()))
-	sb.WriteString(fmt.Sprintf("  - Validator Key per Node: %d\n", ts.GetValidatorCount()/uint64(ts.GetValidatingNodeCount())))
+func (ts BaseTestSpec) GetDescription() *helper.Description {
+	desc := helper.NewDescription(ts.Description)
+
+	// Add the testnet config description
+	desc.Add(helper.CategoryTestnetConfiguration, fmt.Sprintf(`
+	  - Node Count: %d
+	  - Validating Node Count: %d
+	  - Validator Key Count: %d
+	  - Validator Key per Node: %d`,
+		ts.GetNodeCount(),
+		ts.GetValidatingNodeCount(),
+		ts.GetValidatorCount(),
+		ts.GetValidatorCount()/uint64(ts.GetValidatingNodeCount()),
+	))
 	if ts.DenebGenesis {
-		sb.WriteString("  - Genesis Fork: Deneb\n")
+		desc.Add(helper.CategoryTestnetConfiguration, "- Genesis Fork: Deneb")
 	} else {
-		sb.WriteString("  - Genesis Fork: Capella\n")
+		desc.Add(helper.CategoryTestnetConfiguration, "- Genesis Fork: Capella")
 	}
 	execCredentialCount := ts.GetExecutionWithdrawalCredentialCount()
 	blsCredentialCount := ts.GetValidatorCount() - execCredentialCount
-	sb.WriteString(fmt.Sprintf("  - Execution Withdrawal Credentials Count: %d\n", execCredentialCount))
-	sb.WriteString(fmt.Sprintf("  - BLS Withdrawal Credentials Count: %d\n", blsCredentialCount))
+	desc.Add(helper.CategoryTestnetConfiguration, fmt.Sprintf(`
+	  - Execution Withdrawal Credentials Count: %d
+	  - BLS Withdrawal Credentials Count: %d`,
+		execCredentialCount,
+		blsCredentialCount,
+	))
 
-	return sb.String()
+	// Add the verifications description
+	desc.Add(helper.CategoryVerificationsExecutionClient, `
+	  - Blob (type-3) transactions are included in the blocks`)
+	desc.Add(helper.CategoryVerificationsConsensusClient, `
+	  - For each blob transaction on the execution chain, the blob sidecars are available for the beacon block at the same height
+	  - The beacon block lists the correct commitments for each blob`)
+
+	return desc
 }
 
 func (ts BaseTestSpec) GetValidatorCount() uint64 {

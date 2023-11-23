@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
+	"github.com/ethereum/hive/simulators/eth2/dencun/helper"
 	suite_base "github.com/ethereum/hive/simulators/eth2/dencun/suites/base"
 	mock_builder "github.com/marioevz/mock-builder/mock"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
@@ -95,4 +96,9 @@ func (ts BuilderTestSpec) GetTestnetConfig(
 	}
 
 	return tc
+}
+
+func (ts BuilderTestSpec) GetDescription() *helper.Description {
+	desc := ts.BaseTestSpec.GetDescription()
+	return desc
 }

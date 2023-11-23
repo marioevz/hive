@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
 	consensus_config "github.com/ethereum/hive/simulators/eth2/common/config/consensus"
 	"github.com/ethereum/hive/simulators/eth2/common/testnet"
+	"github.com/ethereum/hive/simulators/eth2/dencun/helper"
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 )
 
@@ -18,7 +19,7 @@ type TestSpec interface {
 	GetName() string
 	GetTestnetConfig(clients.NodeDefinitions) *testnet.Config
 	GetDisplayName() string
-	GetDescription() string
+	GetDescription() *helper.Description
 	ExecutePreFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	ExecutePostFork(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
 	ExecutePostForkWait(*hivesim.T, context.Context, *testnet.Testnet, *testnet.Environment, *testnet.Config)
@@ -44,7 +45,7 @@ func SuiteHydrate(
 				strings.Join(clientCombinations.ClientTypes(), "-"),
 			),
 			DisplayName: test.GetDisplayName(),
-			Description: test.GetDescription(),
+			Description: test.GetDescription().Format(),
 			Run: func(t *hivesim.T) {
 				t.Logf("Starting test: %s", test.GetName())
 				defer t.Logf("Finished test: %s", test.GetName())

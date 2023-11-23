@@ -13,11 +13,6 @@ type SyncTestSpec struct {
 func (ts SyncTestSpec) GetTestnetConfig(
 	allNodeDefinitions clients.NodeDefinitions,
 ) *testnet.Config {
-	// By default the last client does not validate and must sync to the other clients
-	if ts.BaseTestSpec.ValidatingNodeCount == 0 {
-		ts.BaseTestSpec.ValidatingNodeCount = ts.BaseTestSpec.NodeCount - 1
-	}
-
 	tc := ts.BaseTestSpec.GetTestnetConfig(allNodeDefinitions)
 
 	// We disable the start of the last node

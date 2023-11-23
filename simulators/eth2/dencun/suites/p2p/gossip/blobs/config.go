@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/hive/hivesim"
 	"github.com/ethereum/hive/simulators/eth2/common/clients"
 	tn "github.com/ethereum/hive/simulators/eth2/common/testnet"
+	"github.com/ethereum/hive/simulators/eth2/dencun/helper"
 	suite_base "github.com/ethereum/hive/simulators/eth2/dencun/suites/base"
 	blobber_config "github.com/marioevz/blobber/config"
 	blobber_slot_actions "github.com/marioevz/blobber/slot_actions"
@@ -26,9 +27,12 @@ const (
 	MAX_MISSED_SLOTS       = 3
 )
 
-func (ts P2PBlobsGossipTestSpec) GetDescription() string {
+func (ts P2PBlobsGossipTestSpec) GetDescription() *helper.Description {
+	desc := ts.BaseTestSpec.GetDescription()
+
 	// Print the base test spec description plus the blobber action description
-	return ts.BaseTestSpec.Description + "\n" + ts.BlobberSlotAction.Description()
+	desc.Add("Blobber Behavior", ts.BlobberSlotAction.Description())
+	return desc
 }
 
 func (ts P2PBlobsGossipTestSpec) GetMaxMissedSlots() beacon.Slot {

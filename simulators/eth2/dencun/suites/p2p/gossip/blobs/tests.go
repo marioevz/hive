@@ -22,7 +22,8 @@ func init() {
 		P2PBlobsGossipTestSpec{
 			BlobberSlotAction: blobber_slot_actions.Default{},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "blob-gossiping-sanity",
+				Name:        "blob-gossiping-sanity",
+				DisplayName: "Blob Gossiping Sanity",
 				Description: `
 		Sanity test where the blobber is verified to be working correctly
 		`,
@@ -35,7 +36,8 @@ func init() {
 				BroadcastBlobsFirst: true,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "blob-gossiping-before-block",
+				Name:        "blob-gossiping-before-block",
+				DisplayName: "Blob Gossiping Before Block",
 				Description: `
 		Test chain health where the blobs are gossiped before the block
 		`,
@@ -48,7 +50,8 @@ func init() {
 				DelayMilliseconds: 500,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "blob-gossiping-delay",
+				Name:        "blob-gossiping-delay",
+				DisplayName: "Blob Gossiping Delay",
 				Description: `
 		Test chain health where the blobs are gossiped after the block with a 500ms delay
 		`,
@@ -61,7 +64,8 @@ func init() {
 				DelayMilliseconds: 6000,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "blob-gossiping-one-slot-delay",
+				Name:        "blob-gossiping-one-slot-delay",
+				DisplayName: "Blob Gossiping One-Slot Delay",
 				Description: `
 		Test chain health where the blobs are gossiped after the block with a 6s delay
 		`,
@@ -76,7 +80,8 @@ func init() {
 				CorrectBlockDelayMilliseconds: 500,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "equivocating-block",
+				Name:        "equivocating-block",
+				DisplayName: "Equivocating Block",
 				Description: `
 		Test chain health a proposer sends an equivocating block before the correct block.
 		Blob sidecars contain the correct block header.
@@ -92,7 +97,8 @@ func init() {
 				BroadcastBlobsFirst: true,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "equivocating-block-and-blobs",
+				Name:        "equivocating-block-and-blobs",
+				DisplayName: "Equivocating Block and Blobs",
 				Description: `
 		Test chain health a proposer sends equivocating blobs and block to different peers
 		`,
@@ -108,7 +114,8 @@ func init() {
 				BroadcastBlobsFirst: false,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "equivocating-block-header-in-blob-sidecars",
+				Name:        "equivocating-block-header-in-blob-sidecars",
+				DisplayName: "Equivocating Block Header in Blob Sidecars",
 				Description: `
 		Test chain health a proposer sends equivocating blob sidecars (equivocating block header), but the correct full block is sent first.
 		`,
@@ -124,7 +131,8 @@ func init() {
 				BroadcastBlobsFirst: true,
 			},
 			BaseTestSpec: suite_base.BaseTestSpec{
-				Name: "equivocating-block-header-in-blob-sidecars-2",
+				Name:        "equivocating-block-header-in-blob-sidecars-2",
+				DisplayName: "Equivocating Block Header in Blob Sidecars 2",
 				Description: `
 		Test chain health a proposer sends equivocating blob sidecars (equivocating block header), and the correct full block is sent afterwards.
 		`,

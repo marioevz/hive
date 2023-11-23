@@ -18,21 +18,9 @@ var Tests = make([]suites.TestSpec, 0)
 func init() {
 	Tests = append(Tests,
 		BaseTestSpec{
-			Name:        "test-deneb-fork",
-			DisplayName: "Deneb Fork",
-			Description: `
-			Sanity test to check the fork transition to deneb.
-			- Start two validating nodes that begin on Capella/Shanghai genesis
-			- Deneb/Cancun transition occurs on Epoch 1
-			- Total of 128 Validators, 64 for each validating node
-			- Wait for Deneb fork and start sending blob transactions to the Execution client
-			- Verify on the execution client that:
-			  - Blob (type-3) transactions are included in the blocks
-			- Verify on the consensus client that:
-			  - For each blob transaction on the execution chain, the blob sidecars are available for the
-				beacon block at the same height
-			  - The beacon block lists the correct commitments for each blob
-			`,
+			Name:         "test-deneb-fork",
+			DisplayName:  "Deneb Fork",
+			Description:  `Sanity test to check the fork transition to deneb.`,
 			DenebGenesis: false,
 			GenesisExecutionWithdrawalCredentialsShares: 1,
 			EpochsAfterFork: 1,
@@ -42,16 +30,6 @@ func init() {
 			DisplayName: "Deneb Genesis",
 			Description: `
 			Sanity test to check the beacon clients can start with deneb genesis.
-			
-			- Start two validating nodes that begin on Deneb genesis
-			- Total of 128 Validators, 64 for each validating node
-			- From the beginning send blob transactions to the Execution client
-			- Verify on the execution client that:
-			  - Blob (type-3) transactions are included in the blocks
-			- Verify on the consensus client that:
-			  - For each blob transaction on the execution chain, the blob sidecars are available for the
-				beacon block at the same height
-			  - The beacon block lists the correct commitments for each blob
 			`,
 			DenebGenesis: true,
 			GenesisExecutionWithdrawalCredentialsShares: 1,
