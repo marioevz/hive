@@ -73,4 +73,10 @@
       tag: deneb-builder
 
 - client: nimbus-bn
+  nametag: deneb
+  build_args:
+      tag: unstable
 - client: nimbus-vc
+  nametag: deneb
+  build_args:
+      tag: unstable
