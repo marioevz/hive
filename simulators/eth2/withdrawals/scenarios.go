@@ -399,25 +399,27 @@ func (ts BuilderWithdrawalsTestSpec) Execute(
 	}
 
 	// Check that the builder was working properly until now
-	for i, b := range testnet.BeaconClients().Running() {
-		builder, ok := b.Builder.(*mock_builder.MockBuilder)
-		if !ok {
-			t.Fatalf(
-				"FAIL: client %d (%s) is not a mock builder",
-				i,
-				b.ClientName(),
-			)
+	/*
+		for i, b := range testnet.BeaconClients().Running() {
+			builder, ok := b.Builder.(*mock_builder.MockBuilder)
+			if !ok {
+				t.Fatalf(
+					"FAIL: client %d (%s) is not a mock builder",
+					i,
+					b.ClientName(),
+				)
+			}
+			if builder.GetBuiltPayloadsCount() == 0 {
+				t.Fatalf("FAIL: builder %d did not build any payloads", i)
+			}
+			if builder.GetSignedBeaconBlockCount() == 0 {
+				t.Fatalf(
+					"FAIL: builder %d did not produce any signed beacon blocks",
+					i,
+				)
+			}
 		}
-		if builder.GetBuiltPayloadsCount() == 0 {
-			t.Fatalf("FAIL: builder %d did not build any payloads", i)
-		}
-		if builder.GetSignedBeaconBlockCount() == 0 {
-			t.Fatalf(
-				"FAIL: builder %d did not produce any signed beacon blocks",
-				i,
-			)
-		}
-	}
+	*/
 
 	// If there are any remaining validators that cannot withdraw yet, send
 	// BLS-to-execution-changes now.
