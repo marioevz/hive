@@ -108,17 +108,17 @@ func (tc *testcase) run(t *hivesim.T) {
 	engineClient, err := engineStarter.StartClient(t, ctx, tc.genesis, env, nil)
 	if err != nil {
 		tc.failedErr = err
-		t.Fatalf("can't start client with Engine API: %v", err)
+		t.Fatalf("FAIL: can't start client with Engine API: %v", err)
 	}
 	// verify genesis hash matches that of the fixture
 	genesisBlock, err := engineClient.BlockByNumber(ctx, big.NewInt(0))
 	if err != nil {
 		tc.failedErr = err
-		t.Fatalf("unable to get genesis block: %v", err)
+		t.Fatalf("FAIL: unable to get genesis block: %v", err)
 	}
 	if genesisBlock.Hash() != tc.fixture.json.Genesis.Hash {
 		tc.failedErr = errors.New("genesis hash mismatch")
-		t.Fatalf("genesis hash mismatch")
+		t.Fatalf("FAIL: genesis hash mismatch")
 	}
 	t1 := time.Now()
 
@@ -138,17 +138,22 @@ func (tc *testcase) run(t *hivesim.T) {
 		}
 		// set expected payload return status
 		expectedStatus := "VALID"
-		if !engineNewPayload.Valid {
+		if engineNewPayload.ValidationError != nil {
 			expectedStatus = "INVALID"
 		}
 		// check payload status matches expected
 		if plStatus.Status != expectedStatus {
 			tc.failedErr = fmt.Errorf("payload status mismatch: client returned %v and fixture expected %v", plStatus.Status, expectedStatus)
-			t.Fatalf("payload status mismatch: client returned %v fixture expected %v", plStatus.Status, expectedStatus)
+			t.Fatalf("FAIL: payload status mismatch: client returned %v fixture expected %v", plStatus.Status, expectedStatus)
 		}
 		// update latest valid block hash if payload status is VALID
 		if plStatus.Status == "VALID" {
 			latestValidHash = *plStatus.LatestValidHash
+		} else if plStatus.Status == "INVALID" {
+			if err := validateException(mapClientType(tc.clientType), engineNewPayload.ValidationError, plStatus.ValidationError); err != nil {
+				tc.failedErr = err
+				t.Fatalf("FAIL: unable to validate exception: %v", err)
+			}
 		}
 	}
 	t2 := time.Now()
@@ -159,7 +164,7 @@ func (tc *testcase) run(t *hivesim.T) {
 		fcState := &api.ForkchoiceStateV1{HeadBlockHash: latestValidHash}
 		if _, fcErr := engineClient.ForkchoiceUpdated(ctx, int(tc.fixture.json.EngineFcuVersion), fcState, nil); fcErr != nil {
 			tc.failedErr = fcErr
-			t.Fatalf("unable to update head of beacon chain in test %s: %v ", tc.name, fcErr)
+			t.Fatalf("FAIL: unable to update head of beacon chain in test %s: %v ", tc.name, fcErr)
 		}
 	}
 	t3 := time.Now()
@@ -292,11 +297,11 @@ func checkRPCErrors(plErr error, fxErrCode int, t *hivesim.T, tc *testcase) {
 		plErrCode := rpcErr.ErrorCode()
 		if plErrCode != fxErrCode {
 			tc.failedErr = fmt.Errorf("error code mismatch: client returned %v and fixture expected %v", plErrCode, fxErrCode)
-			t.Fatalf("error code mismatch\n client returned: %v\n fixture expected: %v\n in test %s", plErrCode, fxErrCode, tc.name)
+			t.Fatalf("FAIL: error code mismatch\n client returned: %v\n fixture expected: %v\n in test %s", plErrCode, fxErrCode, tc.name)
 		}
 		t.Logf("expected error code caught by client: %v", plErrCode)
 	} else {
 		tc.failedErr = fmt.Errorf("fixture expected rpc error code: %v but none was returned from client", fxErrCode)
-		t.Fatalf("fixture expected rpc error code: %v but none was returned from client in test %s", fxErrCode, tc.name)
+		t.Fatalf("FAIL: fixture expected rpc error code: %v but none was returned from client in test %s", fxErrCode, tc.name)
 	}
 }
