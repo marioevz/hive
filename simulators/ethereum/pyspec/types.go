@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"path/filepath"
+	"strings"
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +28,40 @@ type testcase struct {
 	genesis           *core.Genesis
 	postAlloc         *core.GenesisAlloc
 	engineNewPayloads []engineNewPayload
+}
+
+func (t *testcase) Name() string {
+	return t.name
+}
+
+func (t *testcase) Description() string {
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Test Link: %s\n", t.RepoLink()))
+	if validationError := t.ValidationError(); validationError != nil {
+		sb.WriteString(fmt.Sprintf("Validation Error: %s\n", *validationError))
+	}
+	return sb.String()
+}
+
+func (t *testcase) ValidationError() *string {
+	for _, engineNewPayload := range t.engineNewPayloads {
+		if engineNewPayload.ValidationError != nil {
+			return engineNewPayload.ValidationError
+		}
+	}
+	return nil
+}
+
+// repoLink coverts a pyspec test path into a github repository link.
+func (t *testcase) RepoLink() string {
+	// Example: Converts '/fixtures/cancun/eip4844_blobs/blob_txs/invalid_normal_gas.json'
+	// into 'tests/cancun/eip4844_blobs/test_blob_txs.py', and appends onto main branch repo link.
+	filePath := strings.Replace(t.filepath, "/fixtures", "tests", -1)
+	fileDir := filepath.Dir(filePath)
+	fileBase := filepath.Base(fileDir)
+	fileName := filepath.Join(filepath.Dir(fileDir), "test_"+fileBase+".py")
+	repoLink := fmt.Sprintf("https://github.com/ethereum/execution-spec-tests/tree/main/%v", fileName)
+	return repoLink
 }
 
 type fixtureTest struct {
