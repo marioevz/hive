@@ -27,6 +27,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": ``,
 		"reth":        ``,
 		"erigon":      ``,
+		"nethermind":  ``,
 	},
 	"TransactionException.INSUFFICIENT_MAX_FEE_PER_BLOB_GAS": {
 		"besu":        ``,
@@ -34,6 +35,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `max fee per blob gas less than block blob gas fee`,
 		"reth":        `Transaction error: BlobGasPriceGreaterThanMax`,
 		"erigon":      `max fee per blob gas too low`,
+		"nethermind":  `InsufficientMaxFeePerBlobGas: Not enough to cover blob gas fee.`,
 	},
 	"TransactionException.INTRINSIC_GAS_TOO_LOW": {
 		"besu":        `transaction invalid intrinsic gas cost \d+ exceeds gas limit \d+`,
@@ -41,6 +43,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `intrinsic gas too low: have \d+, want \d+`,
 		"reth":        `Transaction error: CallGasCostMoreThanGasLimit`,
 		"erigon":      `could not apply tx .* intrinsic gas too low: have \d+, want \d+`,
+		"nethermind":  `IntrinsicGasTooLow: Gas limit is too low.`,
 	},
 	"TransactionException.INITCODE_SIZE_EXCEEDED": {
 		"besu":        `transaction invalid Initcode size of \d+ exceeds maximum size of \d+`,
@@ -48,6 +51,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `max initcode size exceeded: code size \d+ limit \d+`,
 		"reth":        `Transaction error: CreateInitcodeSizeLimit`,
 		"erigon":      `could not apply tx .* max initcode size exceeded: code size \d+ limit \d+`,
+		"nethermind":  `ContractSizeTooBig: Max initcode size exceeded.`,
 	},
 	"TransactionException.TYPE_3_TX_PRE_FORK": {
 		"besu":        `transaction invalid Transaction type BLOB is invalid, accepted transaction types are .*`,
@@ -55,6 +59,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `transaction type not supported`,
 		"reth":        `pre-Cancun payload has blob transactions`,
 		"erigon":      `blob tx is not supported by signer`,
+		"nethermind":  `InvalidTxType: Transaction type in \d+ is not supported.`,
 	},
 	"TransactionException.TYPE_3_TX_ZERO_BLOBS_PRE_FORK": {
 		"besu":        `Failed to decode transactions from block parameter`,
@@ -69,6 +74,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob \d+ hash version mismatch`,
 		"reth":        `Transaction error: BlobVersionNotSupported`,
 		"erigon":      ``,
+		"nethermind":  `InvalidBlobVersionedHashVersion: Blob version not supported.`,
 	},
 	"TransactionException.TYPE_3_TX_WITH_FULL_BLOBS": {
 		"besu":        `Failed to decode transactions from block parameter`,
@@ -83,6 +89,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used \d+ exceeds maximum allowance \d+`,
 		"reth":        `blob gas used \d+ exceeds maximum allowance \d+`,
 		"erigon":      `could not apply tx .* blob gas limit reached`,
+		"nethermind":  `BlockBlobGasExceeded: A block cannot have more than \d+ blob gas.`,
 	},
 	"TransactionException.TYPE_3_TX_CONTRACT_CREATION": {
 		"besu":        `transaction invalid transaction blob transactions cannot have a to address`,
@@ -97,6 +104,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used \d+ exceeds maximum allowance \d+`,
 		"reth":        `blob gas used \d+ exceeds maximum allowance \d+`,
 		"erigon":      `could not apply tx .* blob gas limit reached`,
+		"nethermind":  `BlobTxGasLimitExceeded: Transaction exceeded \d+.`,
 	},
 	"TransactionException.TYPE_3_TX_ZERO_BLOBS": {
 		"besu":        `Failed to decode transactions from block parameter`,
@@ -104,7 +112,9 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob transaction missing blob hashes`,
 		"reth":        `Transaction error: EmptyBlobs`,
 		"erigon":      ``,
+		"nethermind":  `BlobTxMissingBlobs: Blob transaction must have blobs.`,
 	},
+
 	// Block Exceptions
 	"BlockException.INCORRECT_BLOCK_FORMAT": {
 		"besu":        ``,
@@ -119,6 +129,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used mismatch \(header \d+, calculated \d+\)`,
 		"reth":        `blob gas used mismatch: got \d+, expected \d+`,
 		"erigon":      `blob gas used by execution: \d+, in header: \d+`,
+		"nethermind":  `HeaderBlobGasMismatch: Blob gas in header does not match calculated.`,
 	},
 	"BlockException.BLOB_GAS_USED_ABOVE_LIMIT": {
 		"besu":        `Payload BlobGasUsed does not match calculated BlobGasUsed`,
@@ -126,6 +137,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used \d+ exceeds maximum allowance \d+`,
 		"reth":        `blob gas used mismatch: got \d+, expected \d+`,
 		"erigon":      `blob gas used by execution: \d+, in header: \d+`,
+		"nethermind":  `BlockBlobGasExceeded: A block cannot have more than \d+ blob gas.`,
 	},
 	"BlockException.INCORRECT_EXCESS_BLOB_GAS": {
 		"besu":        `Payload excessBlobGas does not match calculated excessBlobGas`,
@@ -133,6 +145,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `invalid excessBlobGas: have \d+, want \d+`,
 		"reth":        `invalid excess blob gas: got \d+, expected \d+`,
 		"erigon":      `invalid excessBlobGas: have \d+, want \d+`,
+		"nethermind":  `BlockBlobGasExceeded: A block cannot have more than \d+ blob gas.`,
 	},
 }
 
