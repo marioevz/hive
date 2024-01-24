@@ -22,9 +22,7 @@ COPY --from=builder /source/pyspec/pyspec .
 # uncomment the ADD line.
 # Download the latest fixture release.
 # RUN wget https://github.com/ethereum/execution-spec-tests/releases/latest/download/fixtures_develop_hive.tar.gz
-ADD ./pyspec/fixtures.tar.gz /pyspec
-RUN tar -xzvf fixtures.tar.gz
-RUN mv fixtures/blockchain_tests_hive /fixtures
+ADD ./pyspec/fixtures/blockchain_tests_hive /fixtures
 
 # ADD ./pyspec/fixtures /fixtures
 
