@@ -27,7 +27,7 @@
   dockerfile: git
   build_args:
       github: NethermindEth/nethermind
-      tag: master
+      tag: feature/details-message-blockprocessing
 
 - client: reth
   nametag: cancun-git
