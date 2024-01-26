@@ -59,7 +59,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `transaction type not supported`,
 		"reth":        `pre-Cancun payload has blob transactions`,
 		"erigon":      `blob tx is not supported by signer`,
-		"nethermind":  `InvalidTxType: Transaction type in \d+ is not supported.`,
+		"nethermind":  `InvalidTxType: Transaction type in \w+ is not supported.`,
 	},
 	"TransactionException.TYPE_3_TX_ZERO_BLOBS_PRE_FORK": {
 		"besu":        `Failed to decode transactions from block parameter`,
@@ -82,6 +82,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `unexpected blob sidecar in transaction at index \d+`,
 		"reth":        `unexpected list`,
 		"erigon":      `rlp: expected String or Byte`,
+		"nethermind":  `Transaction \d+ is not valid`,
 	},
 	"TransactionException.TYPE_3_TX_BLOB_COUNT_EXCEEDED": {
 		"besu":        `Invalid Blob Count: \d+`,
@@ -89,7 +90,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used \d+ exceeds maximum allowance \d+`,
 		"reth":        `blob gas used \d+ exceeds maximum allowance \d+`,
 		"erigon":      `could not apply tx .* blob gas limit reached`,
-		"nethermind":  `BlockBlobGasExceeded: A block cannot have more than \d+ blob gas.`,
+		"nethermind":  `BlobTxGasLimitExceeded: Transaction exceeded \d+.`,
 	},
 	"TransactionException.TYPE_3_TX_CONTRACT_CREATION": {
 		"besu":        `transaction invalid transaction blob transactions cannot have a to address`,
@@ -97,6 +98,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `invalid transaction \d+: rlp: input string too short for common.Address, decoding into \(types\.BlobTx\)\.To`,
 		"reth":        `Transaction error: BlobCreateTransaction`,
 		"erigon":      `wrong size for To: 0`,
+		"nethermind":  `BlobTxMissingTo: Must be set.`,
 	},
 	"TransactionException.TYPE_3_TX_MAX_BLOB_GAS_ALLOWANCE_EXCEEDED": {
 		"besu":        `Invalid Blob Count: \d+`,
@@ -104,7 +106,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `blob gas used \d+ exceeds maximum allowance \d+`,
 		"reth":        `blob gas used \d+ exceeds maximum allowance \d+`,
 		"erigon":      `could not apply tx .* blob gas limit reached`,
-		"nethermind":  `BlobTxGasLimitExceeded: Transaction exceeded \d+.`,
+		"nethermind":  `BlobTxGasLimitExceeded: Transaction exceeded \d+`,
 	},
 	"TransactionException.TYPE_3_TX_ZERO_BLOBS": {
 		"besu":        `Failed to decode transactions from block parameter`,
@@ -145,7 +147,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"go-ethereum": `invalid excessBlobGas: have \d+, want \d+`,
 		"reth":        `invalid excess blob gas: got \d+, expected \d+`,
 		"erigon":      `invalid excessBlobGas: have \d+, want \d+`,
-		"nethermind":  `BlockBlobGasExceeded: A block cannot have more than \d+ blob gas.`,
+		"nethermind":  `HeaderExcessBlobGasMismatch: Excess blob gas in header does not match calculated.`, // {nameof(blobGasPrice)} overflow
 	},
 }
 
@@ -192,7 +194,7 @@ func validateException(clientType string, expectedExceptions *string, actualExce
 		if clientRegexMap, ok := exceptionClientRegexMap[expectedException]; ok {
 			if regex, ok := clientRegexMap[clientType]; ok {
 				if regex == "" {
-					return fmt.Errorf("client %s does not support exception: %s", clientType, expectedException)
+					return fmt.Errorf("client %s does not support exception \"%s\": %s", clientType, expectedException, *actualException)
 				}
 				if matchRegex(regex, *actualException) {
 					return nil
