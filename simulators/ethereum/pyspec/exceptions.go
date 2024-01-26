@@ -71,7 +71,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 	"TransactionException.TYPE_3_TX_INVALID_BLOB_VERSIONED_HASH": {
 		"besu":        `Invalid versionedHash`,
 		"ethereumjs":  `Invalid tx at index \d+: Error: versioned hash does not start with KZG commitment version`,
-		"go-ethereum": `blob \d+ hash version mismatch`,
+		"go-ethereum": `blob \d+ has invalid hash version`,
 		"reth":        `Transaction error: BlobVersionNotSupported`,
 		"erigon":      ``,
 		"nethermind":  `InvalidBlobVersionedHashVersion: Blob version not supported.`,
