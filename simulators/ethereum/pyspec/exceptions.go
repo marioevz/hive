@@ -30,7 +30,7 @@ var exceptionClientRegexMap = map[string]map[string]string{
 		"nethermind":  ``,
 	},
 	"TransactionException.INSUFFICIENT_MAX_FEE_PER_BLOB_GAS": {
-		"besu":        ``,
+		"besu":        `InsufficientMaxFeePerBlobGas: Not enough to cover blob gas fee.`,
 		"ethereumjs":  `blob transaction maxFeePerBlobGas \d+ < than block blob gas price \d+`,
 		"go-ethereum": `max fee per blob gas less than block blob gas fee`,
 		"reth":        `Transaction error: BlobGasPriceGreaterThanMax`,
