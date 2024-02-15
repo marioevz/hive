@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path/filepath"
+	"strings"
 
 	api "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -34,9 +36,39 @@ type TestCase struct {
 	FailCallback Fail
 }
 
+func (t *TestCase) Description() string {
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Test Link: %s\n", t.RepoLink()))
+	if validationError := t.ValidationError(); validationError != nil {
+		sb.WriteString(fmt.Sprintf("Validation Error: %s\n", *validationError))
+	}
+	return sb.String()
+}
+
+func (t *TestCase) ValidationError() *string {
+	for _, engineNewPayload := range t.EngineNewPayloads {
+		if engineNewPayload.ValidationError != nil {
+			return engineNewPayload.ValidationError
+		}
+	}
+	return nil
+}
+
+// repoLink coverts a pyspec test path into a github repository link.
+func (t *TestCase) RepoLink() string {
+	// Example: Converts '/fixtures/cancun/eip4844_blobs/blob_txs/invalid_normal_gas.json'
+	// into 'tests/cancun/eip4844_blobs/test_blob_txs.py', and appends onto main branch repo link.
+	filePath := strings.Replace(t.FilePath, "/fixtures", "tests", -1)
+	fileDir := filepath.Dir(filePath)
+	fileBase := filepath.Base(fileDir)
+	fileName := filepath.Join(filepath.Dir(fileDir), "test_"+fileBase+".py")
+	repoLink := fmt.Sprintf("https://github.com/ethereum/execution-spec-tests/tree/main/%v", fileName)
+	return repoLink
+}
+
 func (tc *TestCase) Fatalf(format string, args ...interface{}) {
 	tc.FailedErr = fmt.Errorf(format, args...)
-	tc.FailCallback.Fatalf(format, args...)
+	tc.FailCallback.Fatalf("FAIL: "+format, args...)
 }
 
 type Fixture struct {
@@ -182,7 +214,7 @@ func (p *EngineNewPayload) Execute(ctx context.Context, engineClient client.Engi
 	return status, parseError(err)
 }
 
-func (p *EngineNewPayload) ExecuteValidate(ctx context.Context, engineClient client.EngineClient) (bool, error) {
+func (p *EngineNewPayload) ExecuteValidate(ctx context.Context, engineClient client.EngineClient, clientType string) (bool, error) {
 	plStatus, plErr := p.Execute(ctx, engineClient)
 	if err := p.ValidateRPCError(plErr); err != nil {
 		return false, err
@@ -196,6 +228,11 @@ func (p *EngineNewPayload) ExecuteValidate(ctx context.Context, engineClient cli
 	// Check payload status matches expected
 	if plStatus.Status != p.ExpectedStatus() {
 		return false, fmt.Errorf("payload status mismatch: got %s, want %s", plStatus.Status, p.ExpectedStatus())
+	}
+	if !p.Valid() {
+		if err := validateException(mapClientType(clientType), p.ValidationError, plStatus.ValidationError); err != nil {
+			return false, err
+		}
 	}
 	return false, nil
 }

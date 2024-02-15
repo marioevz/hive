@@ -8,10 +8,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/ethereum/hive/hivesim"
@@ -75,11 +73,10 @@ func fixtureRunner(t *hivesim.T) {
 			defer wg.Done()
 			for test := range testCh {
 				t.Run(hivesim.TestSpec{
-					Name: test.Name,
-					Description: ("Test Link: " +
-						repoLink(test.FilePath)),
-					Run:       test.run,
-					AlwaysRun: false,
+					Name:        test.Name,
+					Description: test.Description(),
+					Run:         test.run,
+					AlwaysRun:   false,
 				})
 				if test.FailedErr != nil {
 					failedTests[test.ClientType+"/"+test.Name] = test.FailedErr
@@ -114,16 +111,4 @@ func fixtureRunner(t *hivesim.T) {
 			t.Logf("%v: %v", name, err)
 		}
 	}
-}
-
-// repoLink coverts a pyspec test path into a github repository link.
-func repoLink(testPath string) string {
-	// Example: Converts '/fixtures/cancun/eip4844_blobs/blob_txs/invalid_normal_gas.json'
-	// into 'tests/cancun/eip4844_blobs/test_blob_txs.py', and appends onto main branch repo link.
-	filePath := strings.Replace(testPath, "/fixtures", "tests", -1)
-	fileDir := filepath.Dir(filePath)
-	fileBase := filepath.Base(fileDir)
-	fileName := filepath.Join(filepath.Dir(fileDir), "test_"+fileBase+".py")
-	repoLink := fmt.Sprintf("https://github.com/ethereum/execution-spec-tests/tree/main/%v", fileName)
-	return repoLink
 }

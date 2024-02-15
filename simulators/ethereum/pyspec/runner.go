@@ -53,7 +53,7 @@ func loadFixtureTests(t *hivesim.T, root string, re *regexp.Regexp, fn func(Test
 			}
 			// define testcase (tc) struct with initial fields
 			tc := TestCase{
-				Name:     path[10:len(path)-5] + "/" + name,
+				Name:     name,
 				FilePath: path,
 				Fixture:  fixture,
 			}
@@ -118,6 +118,7 @@ func (tc *TestCase) run(t *hivesim.T) {
 		if syncing, err := engineNewPayload.ExecuteValidate(
 			ctx,
 			engineClient,
+			tc.ClientType,
 		); err != nil {
 			tc.Fatalf("Payload validation error: %v", err)
 		} else if syncing {
@@ -148,6 +149,7 @@ func (tc *TestCase) run(t *hivesim.T) {
 		if syncing, err := tc.SyncPayload.ExecuteValidate(
 			ctx,
 			engineClient,
+			tc.ClientType,
 		); err != nil {
 			tc.Fatalf("unable to send sync payload: %v", err)
 		} else if syncing {
@@ -172,6 +174,7 @@ func (tc *TestCase) run(t *hivesim.T) {
 		if _, err := tc.SyncPayload.ExecuteValidate(
 			ctx,
 			secondEngineClient,
+			tc.ClientType,
 		); err != nil {
 			tc.Fatalf("unable to send sync payload: %v", err)
 		} // Don't check syncing here because some clients do sync immediately
