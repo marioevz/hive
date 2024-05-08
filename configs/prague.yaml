@@ -1,0 +1,6 @@
+- client: go-ethereum
+  nametag: prague-git
+  dockerfile: git
+  build_args:
+      github: marioevz/go-ethereum
+      tag: prague-devnet-0
