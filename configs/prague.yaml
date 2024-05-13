@@ -4,3 +4,8 @@
   build_args:
       github: marioevz/go-ethereum
       tag: prague-devnet-0
+- client: nethermind
+  nametag: prague-git
+  dockerfile: git
+  build_args:
+      tag: pectra
