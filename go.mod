@@ -99,3 +99,5 @@ require (
 )
 
 replace github.com/ethereum/hive/hiveproxy => ./hiveproxy
+
+replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum prague-devnet-0
