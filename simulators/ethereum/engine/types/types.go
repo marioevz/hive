@@ -116,23 +116,25 @@ type payloadAttributesMarshaling struct {
 
 // ExecutableData is the data necessary to execute an EL payload.
 type ExecutableData struct {
-	ParentHash    common.Hash         `json:"parentHash"    gencodec:"required"`
-	FeeRecipient  common.Address      `json:"feeRecipient"  gencodec:"required"`
-	StateRoot     common.Hash         `json:"stateRoot"     gencodec:"required"`
-	ReceiptsRoot  common.Hash         `json:"receiptsRoot"  gencodec:"required"`
-	LogsBloom     []byte              `json:"logsBloom"     gencodec:"required"`
-	Random        common.Hash         `json:"prevRandao"    gencodec:"required"`
-	Number        uint64              `json:"blockNumber"   gencodec:"required"`
-	GasLimit      uint64              `json:"gasLimit"      gencodec:"required"`
-	GasUsed       uint64              `json:"gasUsed"       gencodec:"required"`
-	Timestamp     uint64              `json:"timestamp"     gencodec:"required"`
-	ExtraData     []byte              `json:"extraData"     gencodec:"required"`
-	BaseFeePerGas *big.Int            `json:"baseFeePerGas" gencodec:"required"`
-	BlockHash     common.Hash         `json:"blockHash"     gencodec:"required"`
-	Transactions  [][]byte            `json:"transactions"  gencodec:"required"`
-	Withdrawals   []*types.Withdrawal `json:"withdrawals"`
-	BlobGasUsed   *uint64             `json:"blobGasUsed,omitempty"`
-	ExcessBlobGas *uint64             `json:"excessBlobGas,omitempty"`
+	ParentHash         common.Hash              `json:"parentHash"    gencodec:"required"`
+	FeeRecipient       common.Address           `json:"feeRecipient"  gencodec:"required"`
+	StateRoot          common.Hash              `json:"stateRoot"     gencodec:"required"`
+	ReceiptsRoot       common.Hash              `json:"receiptsRoot"  gencodec:"required"`
+	LogsBloom          []byte                   `json:"logsBloom"     gencodec:"required"`
+	Random             common.Hash              `json:"prevRandao"    gencodec:"required"`
+	Number             uint64                   `json:"blockNumber"   gencodec:"required"`
+	GasLimit           uint64                   `json:"gasLimit"      gencodec:"required"`
+	GasUsed            uint64                   `json:"gasUsed"       gencodec:"required"`
+	Timestamp          uint64                   `json:"timestamp"     gencodec:"required"`
+	ExtraData          []byte                   `json:"extraData"     gencodec:"required"`
+	BaseFeePerGas      *big.Int                 `json:"baseFeePerGas" gencodec:"required"`
+	BlockHash          common.Hash              `json:"blockHash"     gencodec:"required"`
+	Transactions       [][]byte                 `json:"transactions"  gencodec:"required"`
+	Withdrawals        []*types.Withdrawal      `json:"withdrawals"`
+	BlobGasUsed        *uint64                  `json:"blobGasUsed,omitempty"`
+	ExcessBlobGas      *uint64                  `json:"excessBlobGas,omitempty"`
+	DepositRequests    types.Deposits           `json:"depositRequests"`
+	WithdrawalRequests types.WithdrawalRequests `json:"withdrawalRequests"`
 
 	// NewPayload parameters
 	VersionedHashes       *[]common.Hash `json:"-"`
@@ -172,45 +174,49 @@ type executionPayloadEnvelopeMarshaling struct {
 // Convert Execution Payload Types
 func ToBeaconExecutableData(pl *ExecutableData) (geth_beacon.ExecutableData, error) {
 	return geth_beacon.ExecutableData{
-		ParentHash:    pl.ParentHash,
-		FeeRecipient:  pl.FeeRecipient,
-		StateRoot:     pl.StateRoot,
-		ReceiptsRoot:  pl.ReceiptsRoot,
-		LogsBloom:     pl.LogsBloom,
-		Random:        pl.Random,
-		Number:        pl.Number,
-		GasLimit:      pl.GasLimit,
-		GasUsed:       pl.GasUsed,
-		Timestamp:     pl.Timestamp,
-		ExtraData:     pl.ExtraData,
-		BaseFeePerGas: pl.BaseFeePerGas,
-		BlockHash:     pl.BlockHash,
-		Transactions:  pl.Transactions,
-		Withdrawals:   pl.Withdrawals,
-		BlobGasUsed:   pl.BlobGasUsed,
-		ExcessBlobGas: pl.ExcessBlobGas,
+		ParentHash:         pl.ParentHash,
+		FeeRecipient:       pl.FeeRecipient,
+		StateRoot:          pl.StateRoot,
+		ReceiptsRoot:       pl.ReceiptsRoot,
+		LogsBloom:          pl.LogsBloom,
+		Random:             pl.Random,
+		Number:             pl.Number,
+		GasLimit:           pl.GasLimit,
+		GasUsed:            pl.GasUsed,
+		Timestamp:          pl.Timestamp,
+		ExtraData:          pl.ExtraData,
+		BaseFeePerGas:      pl.BaseFeePerGas,
+		BlockHash:          pl.BlockHash,
+		Transactions:       pl.Transactions,
+		Withdrawals:        pl.Withdrawals,
+		BlobGasUsed:        pl.BlobGasUsed,
+		ExcessBlobGas:      pl.ExcessBlobGas,
+		Deposits:           pl.DepositRequests,
+		WithdrawalRequests: pl.WithdrawalRequests,
 	}, nil
 }
 
 func FromBeaconExecutableData(ed *geth_beacon.ExecutableData) (ExecutableData, error) {
 	return ExecutableData{
-		ParentHash:    ed.ParentHash,
-		FeeRecipient:  ed.FeeRecipient,
-		StateRoot:     ed.StateRoot,
-		ReceiptsRoot:  ed.ReceiptsRoot,
-		LogsBloom:     ed.LogsBloom,
-		Random:        ed.Random,
-		Number:        ed.Number,
-		GasLimit:      ed.GasLimit,
-		GasUsed:       ed.GasUsed,
-		Timestamp:     ed.Timestamp,
-		ExtraData:     ed.ExtraData,
-		BaseFeePerGas: ed.BaseFeePerGas,
-		BlockHash:     ed.BlockHash,
-		Transactions:  ed.Transactions,
-		Withdrawals:   ed.Withdrawals,
-		BlobGasUsed:   ed.BlobGasUsed,
-		ExcessBlobGas: ed.ExcessBlobGas,
+		ParentHash:         ed.ParentHash,
+		FeeRecipient:       ed.FeeRecipient,
+		StateRoot:          ed.StateRoot,
+		ReceiptsRoot:       ed.ReceiptsRoot,
+		LogsBloom:          ed.LogsBloom,
+		Random:             ed.Random,
+		Number:             ed.Number,
+		GasLimit:           ed.GasLimit,
+		GasUsed:            ed.GasUsed,
+		Timestamp:          ed.Timestamp,
+		ExtraData:          ed.ExtraData,
+		BaseFeePerGas:      ed.BaseFeePerGas,
+		BlockHash:          ed.BlockHash,
+		Transactions:       ed.Transactions,
+		Withdrawals:        ed.Withdrawals,
+		BlobGasUsed:        ed.BlobGasUsed,
+		ExcessBlobGas:      ed.ExcessBlobGas,
+		DepositRequests:    ed.Deposits,
+		WithdrawalRequests: ed.WithdrawalRequests,
 	}, nil
 }
 
