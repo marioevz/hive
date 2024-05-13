@@ -179,14 +179,14 @@ func (blobId BlobID) GenerateBlobNoKZGCache() (*typ.Blob, *typ.KZGCommitment, *t
 		return nil, nil, nil, errors.Wrap(err, "GenerateBlob: Filling Blob")
 	}
 	ctx_4844 := CryptoCtx()
-
-	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(gokzg4844.Blob(blob), 0)
+	goKzgBlob := gokzg4844.Blob(blob)
+	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(&goKzgBlob, 0)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "GenerateBlob: Generating commitment")
 	}
 	typesKzgCommitment := typ.KZGCommitment(kzgCommitment)
 
-	proof, err := ctx_4844.ComputeBlobKZGProof(gokzg4844.Blob(blob), kzgCommitment, 1)
+	proof, err := ctx_4844.ComputeBlobKZGProof(&goKzgBlob, kzgCommitment, 1)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "GenerateBlob: Generating proof")
 	}
@@ -228,14 +228,15 @@ func (blobId BlobID) GenerateBlob() (*typ.Blob, *typ.KZGCommitment, *typ.KZGProo
 		fmt.Printf("INFO: No precomputed KZG for blob %d\n", blobId)
 	}
 	ctx_4844 := CryptoCtx()
+	goKzgBlob := gokzg4844.Blob(blob)
 
-	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(gokzg4844.Blob(blob), 0)
+	kzgCommitment, err := ctx_4844.BlobToKZGCommitment(&goKzgBlob, 0)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "GenerateBlob: Generating commitment")
 	}
 	typesKzgCommitment := typ.KZGCommitment(kzgCommitment)
 
-	proof, err := ctx_4844.ComputeBlobKZGProof(gokzg4844.Blob(blob), kzgCommitment, 1)
+	proof, err := ctx_4844.ComputeBlobKZGProof(&goKzgBlob, kzgCommitment, 1)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "GenerateBlob: Generating proof")
 	}
