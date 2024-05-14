@@ -2,7 +2,7 @@
   nametag: prague-git
   dockerfile: git
   build_args:
-      github: marioevz/go-ethereum
+      github: lightclient/go-ethereum
       tag: prague-devnet-0
 - client: nethermind
   nametag: prague-git
