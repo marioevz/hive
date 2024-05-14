@@ -16,8 +16,11 @@ func GenerateInvalidPayloadBlock(baseBlock *types.Block, uncle *types.Block, pay
 		}
 		newHeader := types.CopyHeader(baseBlock.Header())
 		newHeader.UncleHash = types.CalcUncleHash(uncles)
-
-		modifiedBlock := types.NewBlockWithHeader(newHeader).WithBody(baseBlock.Transactions(), uncles)
+		body := types.Body{
+			Transactions: baseBlock.Transactions(),
+			Uncles:       uncles,
+		}
+		modifiedBlock := types.NewBlockWithHeader(newHeader).WithBody(body)
 		fmt.Printf("DEBUG: hash=%s, ommerLen=%d, ommersHash=%v\n", modifiedBlock.Hash(), len(modifiedBlock.Uncles()), modifiedBlock.UncleHash())
 		return modifiedBlock, nil
 	}

@@ -39,10 +39,8 @@ require (
 	github.com/deepmap/oapi-codegen v1.12.4 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/ferranbt/fastssz v0.1.2 // indirect
-	github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e // indirect
 	github.com/fjl/memsize v0.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/garslo/gogen v0.0.0-20170306192744-1d203ffc1f61 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gballet/go-verkle v0.1.1-0.20231031103413-a67434b50f46 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
@@ -112,4 +110,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20240508225215-6572d66943bf
+replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20240514072831-19c06c9dcb4c
