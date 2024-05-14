@@ -79,4 +79,4 @@ require (
 
 replace github.com/ethereum/hive/simulators/ethereum/engine => ../engine
 
-replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20240508225215-6572d66943bf
+replace github.com/ethereum/go-ethereum => github.com/marioevz/go-ethereum v1.10.14-0.20240514072831-19c06c9dcb4c
