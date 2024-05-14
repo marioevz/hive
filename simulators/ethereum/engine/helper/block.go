@@ -11,11 +11,16 @@ func GenerateInvalidPayloadBlock(baseBlock *types.Block, uncle *types.Block, pay
 		if uncle == nil {
 			return nil, fmt.Errorf("No ommer provided")
 		}
-		body := baseBlock.Body()
-		body.Uncles = []*types.Header{uncle.Header()}
-		header := baseBlock.Header()
-		header.UncleHash = types.CalcUncleHash(body.Uncles)
-		modifiedBlock := types.NewBlockWithHeader(header).WithBody(*body)
+		uncles := []*types.Header{
+			uncle.Header(),
+		}
+		newHeader := types.CopyHeader(baseBlock.Header())
+		newHeader.UncleHash = types.CalcUncleHash(uncles)
+		body := types.Body{
+			Transactions: baseBlock.Transactions(),
+			Uncles:       uncles,
+		}
+		modifiedBlock := types.NewBlockWithHeader(newHeader).WithBody(body)
 		fmt.Printf("DEBUG: hash=%s, ommerLen=%d, ommersHash=%v\n", modifiedBlock.Hash(), len(modifiedBlock.Uncles()), modifiedBlock.UncleHash())
 		return modifiedBlock, nil
 	}
