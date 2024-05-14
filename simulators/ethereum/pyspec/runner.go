@@ -113,7 +113,7 @@ func (tc *TestCase) run(t *hivesim.T) {
 
 	// send payloads and check response
 	var latestValidPayload *EngineNewPayload
-	for _, engineNewPayload := range tc.EngineNewPayloads {
+	for i, engineNewPayload := range tc.EngineNewPayloads {
 		engineNewPayload := engineNewPayload
 		t.Logf("deposits: %v, withdrawals: %v", engineNewPayload.ExecutionPayload.Deposits, engineNewPayload.ExecutionPayload.WithdrawalRequests)
 		if syncing, err := engineNewPayload.ExecuteValidate(
@@ -127,6 +127,14 @@ func (tc *TestCase) run(t *hivesim.T) {
 		// update latest valid block hash if payload status is VALID
 		if engineNewPayload.Valid() {
 			latestValidPayload = engineNewPayload
+			if i > 0 && (i%10) == 0 {
+				// Send Forkchoice update every 10 payloads
+				if syncing, err := latestValidPayload.ForkchoiceValidate(ctx, engineClient, tc.EngineFcuVersion); err != nil {
+					tc.Fatalf("unable to update head of chain: %v", err)
+				} else if syncing {
+					tc.Fatalf("forkchoice update failed (not synced)")
+				}
+			}
 		}
 	}
 	t2 := time.Now()
