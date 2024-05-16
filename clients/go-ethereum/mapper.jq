@@ -58,5 +58,6 @@ def to_bool:
     "cancunTime": env.HIVE_CANCUN_TIMESTAMP|to_int,
     "pragueTime": env.HIVE_PRAGUE_TIMESTAMP|to_int,
     "terminalTotalDifficultyPassed": true,
+    "depositContractAddress": "0x00000000219ab540356cbb839cbe05303d7705fa",
   }|remove_empty
 }
