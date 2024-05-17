@@ -235,9 +235,25 @@ func toBlockNumArg(number *big.Int) string {
 	return hexutil.EncodeBig(number)
 }
 
+func BatchCallContext(ctx context.Context, c *rpc.Client, reqs []rpc.BatchElem) error {
+	if len(reqs) == 0 {
+		return nil
+	}
+	if err := c.BatchCallContext(ctx, reqs); err != nil {
+		return err
+	}
+	for i, req := range reqs {
+		if req.Error != nil {
+			return errors.Wrap(req.Error, fmt.Sprintf("request %d failed", i))
+		}
+	}
+	return nil
+}
+
 func (ec *HiveRPCEngineClient) StorageAtKeys(ctx context.Context, account common.Address, keys []common.Hash, blockNumber *big.Int) (map[common.Hash]*common.Hash, error) {
-	reqs := make([]rpc.BatchElem, 0, len(keys))
+	max_keys_per_request := 100
 	results := make(map[common.Hash]*common.Hash, len(keys))
+	reqs := make([]rpc.BatchElem, 0, len(keys))
 	var blockNumberString string
 	if blockNumber == nil {
 		blockNumberString = "latest"
@@ -251,16 +267,16 @@ func (ec *HiveRPCEngineClient) StorageAtKeys(ctx context.Context, account common
 			Args:   []interface{}{account, key, blockNumberString},
 			Result: valueResult,
 		})
+		if len(reqs) >= max_keys_per_request {
+			if err := BatchCallContext(ctx, ec.cEth, reqs); err != nil {
+				return nil, err
+			}
+			reqs = reqs[:0]
+		}
 		results[key] = valueResult
 	}
-
-	if err := ec.cEth.BatchCallContext(ctx, reqs); err != nil {
+	if err := BatchCallContext(ctx, ec.cEth, reqs); err != nil {
 		return nil, err
-	}
-	for i, req := range reqs {
-		if req.Error != nil {
-			return nil, errors.Wrap(req.Error, fmt.Sprintf("request for storage at index %d failed", i))
-		}
 	}
 
 	return results, nil
