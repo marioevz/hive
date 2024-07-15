@@ -115,7 +115,6 @@ func (tc *TestCase) run(t *hivesim.T) {
 	var latestValidPayload *EngineNewPayload
 	for i, engineNewPayload := range tc.EngineNewPayloads {
 		engineNewPayload := engineNewPayload
-		t.Logf("deposits: %v, withdrawals: %v", engineNewPayload.ExecutionPayload.Deposits, engineNewPayload.ExecutionPayload.WithdrawalRequests)
 		if syncing, err := engineNewPayload.ExecuteValidate(
 			ctx,
 			engineClient,

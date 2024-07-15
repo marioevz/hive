@@ -3,9 +3,15 @@
   dockerfile: git
   build_args:
       github: lightclient/go-ethereum
-      tag: prague-devnet-0
+      tag: prague-devnet-1
 - client: nethermind
   nametag: prague-git
   dockerfile: git
   build_args:
       tag: pectra
+
+- client: reth
+  nametag: prague-devnet-1
+  build_args:
+    baseimage: ethpandaops/reth
+    tag: devnet-0-6f19101

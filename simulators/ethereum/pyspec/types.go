@@ -44,8 +44,8 @@ type Fixture struct {
 	GenesisBlock      genesisBlock        `json:"genesisBlockHeader"`
 	EngineNewPayloads []*EngineNewPayload `json:"engineNewPayloads"`
 	EngineFcuVersion  int                 `json:"engineFcuVersion,string"`
-	Pre               core.GenesisAlloc   `json:"pre"`
-	PostAlloc         core.GenesisAlloc   `json:"postState"`
+	Pre               types.GenesisAlloc   `json:"pre"`
+	PostAlloc         types.GenesisAlloc   `json:"postState"`
 	SyncPayload       *EngineNewPayload   `json:"syncPayload"`
 }
 

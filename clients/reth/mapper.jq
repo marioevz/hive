@@ -57,5 +57,7 @@ def to_bool:
     "terminalTotalDifficultyPassed": env.HIVE_TERMINAL_TOTAL_DIFFICULTY_PASSED|to_bool,
     "shanghaiTime": env.HIVE_SHANGHAI_TIMESTAMP|to_int,
     "cancunTime": env.HIVE_CANCUN_TIMESTAMP|to_int,
+    "pragueTime": env.HIVE_PRAGUE_TIMESTAMP|to_int,
+    "depositContractAddress": "0x00000000219ab540356cbb839cbe05303d7705fa",
   }|remove_empty
 }
