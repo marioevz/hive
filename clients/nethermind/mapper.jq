@@ -152,11 +152,12 @@ def clique_engine:
     "eip6780TransitionTimestamp": env.HIVE_CANCUN_TIMESTAMP|to_hex,
 
     # Prague
-    "Eip6110TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
-    "Eip7002TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
-    "Eip2537TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
-    "Eip2935TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
-    "Eip3074TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip2537TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip2935TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip6110TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip7002TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip7251TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
+    "eip7702TransitionTimestamp": env.HIVE_PRAGUE_TIMESTAMP|to_hex,
     
 
     # Other chain parameters
