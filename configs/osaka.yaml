@@ -1,0 +1,6 @@
+- client: go-ethereum
+  nametag: osaka-git
+  dockerfile: git
+  build_args:
+    github: marioevz/go-ethereum
+    tag: impl-eip-5920
